@@ -10,7 +10,7 @@ pub const DELTA: f64 = 300.0; // 5 minutes in seconds
 
 // ── Exponential insulin model ─────────────────────────────────────────────────
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ExponentialInsulinModel {
     pub action_duration: f64,    // seconds (excluding delay)
     pub peak_activity_time: f64, // seconds
@@ -84,14 +84,15 @@ impl ModelPreset {
 
 // ── Dose types ────────────────────────────────────────────────────────────────
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum InsulinDeliveryType {
-    Bolus,
+    #[default]
     Basal,
+    Bolus,
 }
 
 /// User-supplied insulin dose.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default, Copy)]
 pub struct InsulinDose {
     pub delivery_type: InsulinDeliveryType,
     pub start: Timestamp,
