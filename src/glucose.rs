@@ -31,7 +31,7 @@ pub fn is_continuous(samples: &[GlucoseSample], interval: f64) -> bool {
         (Some(f), Some(l)) => (f, l),
         _ => return false,
     };
-    (last.start - first.start).abs() < interval * samples.len() as f64
+    libm::fabs(last.start - first.start) < interval * samples.len() as f64
 }
 
 /// True when no consecutive pair differs by more than `threshold` mg/dL.
@@ -41,7 +41,7 @@ pub fn has_gradual_transitions(samples: &[GlucoseSample], threshold: f64) -> boo
     }
     samples
         .windows(2)
-        .all(|w| (w[1].value_mgdl - w[0].value_mgdl).abs() <= threshold)
+        .all(|w| libm::fabs(w[1].value_mgdl - w[0].value_mgdl) <= threshold)
 }
 
 // ── Linear regression ─────────────────────────────────────────────────────────

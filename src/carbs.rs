@@ -61,14 +61,15 @@ impl CarbAbsorptionModel {
                 let rise_threshold = 0.5 * Self::SCALE * Self::RISE_END;
                 let mid_threshold = Self::SCALE * (Self::FALL_START - 0.5 * Self::RISE_END);
                 if a < rise_threshold {
-                    (2.0 * Self::RISE_END * a / Self::SCALE).sqrt()
+                    libm::sqrt(2.0 * Self::RISE_END * a / Self::SCALE)
                 } else if a < mid_threshold {
                     0.5 * Self::RISE_END + a / Self::SCALE
                 } else if a < 1.0 {
-                    1.0 - ((1.0 - Self::FALL_START)
-                        * (1.0 + Self::FALL_START - Self::RISE_END)
-                        * (1.0 - a))
-                        .sqrt()
+                    1.0 - libm::sqrt(
+                        (1.0 - Self::FALL_START)
+                            * (1.0 + Self::FALL_START - Self::RISE_END)
+                            * (1.0 - a),
+                    )
                 } else {
                     1.0
                 }

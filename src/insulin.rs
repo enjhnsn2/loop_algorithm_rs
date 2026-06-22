@@ -26,7 +26,7 @@ impl ExponentialInsulinModel {
         let tau = peak_activity_time * (1.0 - peak_activity_time / action_duration)
             / (1.0 - 2.0 * peak_activity_time / action_duration);
         let a = 2.0 * tau / action_duration;
-        let s = 1.0 / (1.0 - a + (1.0 + a) * (-action_duration / tau).exp());
+        let s = 1.0 / (1.0 - a + (1.0 + a) * libm::exp(-action_duration / tau));
         Self {
             action_duration,
             peak_activity_time,
@@ -50,7 +50,7 @@ impl ExponentialInsulinModel {
         1.0 - self.s
             * (1.0 - self.a)
             * ((t * t / (self.tau * self.action_duration * (1.0 - self.a)) - t / self.tau - 1.0)
-                * (-t / self.tau).exp()
+                * libm::exp(-t / self.tau)
                 + 1.0)
     }
 

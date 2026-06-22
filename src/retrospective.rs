@@ -28,6 +28,16 @@ pub enum RCMode {
     Integral,
 }
 
+fn signum(x: f64) -> f64 {
+    if x.is_nan() {
+        f64::NAN
+    } else if x.is_sign_positive() {
+        1.0
+    } else {
+        -1.0
+    }
+}
+
 /// Compute the Standard RC (proportional controller) effect timeline.
 ///
 /// Returns cumulative `[GlucoseEffect]` starting at `starting_glucose`.
@@ -84,12 +94,13 @@ pub fn integral_rc_effect(
         .filter(|d| d.start >= cutoff && d.end <= starting_glucose_start)
         .collect();
 
-    let current_sign = current_value.signum();
+    let current_sign = signum(current_value);
     let mut recent_values: Vec<f64> = Vec::new();
     let mut next = current;
     for d in past.iter().rev() {
         let v = d.value_mgdl;
-        if v.signum() == current_sign && next.end - d.end <= recency_interval && v.abs() >= 0.1 {
+        if signum(v) == current_sign && next.end - d.end <= recency_interval && libm::fabs(v) >= 0.1
+        {
             recent_values.push(v);
             next = d;
         } else {

@@ -6,7 +6,7 @@ pub fn floor_to(t: Timestamp, interval: f64) -> Timestamp {
     if interval == 0.0 {
         return t;
     }
-    (t / interval).floor() * interval
+    libm::floor(t / interval) * interval
 }
 
 /// Ceil `t` to the nearest multiple of `interval`.
@@ -14,7 +14,7 @@ pub fn ceil_to(t: Timestamp, interval: f64) -> Timestamp {
     if interval == 0.0 {
         return t;
     }
-    (t / interval).ceil() * interval
+    libm::ceil(t / interval) * interval
 }
 
 // ── Schedule ─────────────────────────────────────────────────────────────────
