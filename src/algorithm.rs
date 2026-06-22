@@ -35,6 +35,15 @@ pub const RETROSPECTIVE_EFFECT_DURATION: f64 = 60.0 * 60.0; // 1 hour
 pub const MOMENTUM_DATA_INTERVAL: f64 = 15.0 * 60.0;
 pub const DEFAULT_GRADUAL_TRANSITION_THRESHOLD: f64 = 40.0;
 
+// -- Vec capacities -------------------------------------------------------------------------------
+pub const MAX_GLUCOSE_SAMPLES: usize = libm::ceil((10.0 * 60.0 * 60.0) / DELTA); // 10 hours of sensor data
+pub const MAX_DOSES: usize = libm::ceil((16.0 * 60.0 * 60.0) / DELTA); // 16 hours of dose data
+pub const MAX_CARB_ENTRIES: usize = 50; // 10 hours of carb entries
+pub const MAX_SCHEDULE_ENTRIES: usize = 48; // daily profile entries (30-min granularity)
+
+// (todo) MAX_EFFECT_TIMELINE, MAX_PREDICTION, MAX_VELOCITY, MAX_DISCREPANCIES, MAX_RC_EFFECT,
+// MAX_MOMENTUM_EFFECT, MAX_EFFECT_DELTAS
+
 // ── Option flags ──────────────────────────────────────────────────────────────
 
 #[derive(Clone, Copy, Debug)]
