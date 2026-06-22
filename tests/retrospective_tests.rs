@@ -10,10 +10,10 @@ fn d(offset_secs: f64) -> f64 {
 }
 
 // LoopMath constants (from algorithm.rs)
-const EFFECT_DURATION: f64 = 60.0 * 60.0;     // 1 hour (retrospectiveCorrectionEffectDuration)
-const GROUPING_INTERVAL: f64 = 30.0 * 60.0;   // 30 min (retrospectiveCorrectionGroupingInterval)
-const RECENCY_INTERVAL: f64 = 15.0 * 60.0;    // 15 min
-const DELTA: f64 = 300.0;                       // 5 min
+const EFFECT_DURATION: f64 = 60.0 * 60.0; // 1 hour (retrospectiveCorrectionEffectDuration)
+const GROUPING_INTERVAL: f64 = 30.0 * 60.0; // 30 min (retrospectiveCorrectionGroupingInterval)
+const RECENCY_INTERVAL: f64 = 15.0 * 60.0; // 15 min
+const DELTA: f64 = 300.0; // 5 min
 
 // Swift: Tests/LoopAlgorithmTests/Mocks/IntegralRetrospectiveCorrectionTests.swift:22 testIntegralRestrospectiveCorrection
 #[test]

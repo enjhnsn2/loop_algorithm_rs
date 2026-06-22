@@ -656,9 +656,7 @@ pub fn dynamic_glucose_effects(
     delay: f64,
     delta: f64,
 ) -> Vec<GlucoseEffect> {
-    let Some((start, end)) =
-        carb_simulation_date_range(statuses, from, to, delay, delta)
-    else {
+    let Some((start, end)) = carb_simulation_date_range(statuses, from, to, delay, delta) else {
         return vec![];
     };
 

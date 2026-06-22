@@ -1,6 +1,6 @@
 use loop_algorithm::glucose::{
-    contains_calibrations, has_gradual_transitions, has_single_provenance, is_continuous,
-    counteraction_effects, GlucoseSample,
+    contains_calibrations, counteraction_effects, has_gradual_transitions, has_single_provenance,
+    is_continuous, GlucoseSample,
 };
 use loop_algorithm::types::GlucoseEffect;
 
@@ -13,7 +13,12 @@ fn sample(start: f64, value_mgdl: f64) -> GlucoseSample {
     }
 }
 
-fn sample_with(start: f64, value_mgdl: f64, provenance: u32, is_display_only: bool) -> GlucoseSample {
+fn sample_with(
+    start: f64,
+    value_mgdl: f64,
+    provenance: u32,
+    is_display_only: bool,
+) -> GlucoseSample {
     GlucoseSample {
         start,
         value_mgdl,
@@ -111,9 +116,7 @@ fn test_is_continuous_gap_larger_than_tolerance_returns_false() {
 // Swift: Tests/LoopAlgorithmTests/GlucoseMathTests.swift:171 testContainsCalibrations_NoCalibrations_ReturnsFalse
 #[test]
 fn test_contains_calibrations_no_calibrations_returns_false() {
-    let samples: Vec<GlucoseSample> = (0..3)
-        .map(|i| sample(i as f64 * 300.0, 100.0))
-        .collect();
+    let samples: Vec<GlucoseSample> = (0..3).map(|i| sample(i as f64 * 300.0, 100.0)).collect();
     assert!(!contains_calibrations(&samples));
 }
 
@@ -155,8 +158,14 @@ fn test_has_single_provenance_different_provenance_returns_false() {
 fn test_counteraction_effects_for_no_glucose_returns_empty() {
     let glucose_samples: Vec<GlucoseSample> = vec![];
     let insulin_effects: Vec<GlucoseEffect> = vec![
-        GlucoseEffect { start: 0.0, value_mgdl: 0.0 },
-        GlucoseEffect { start: 300.0, value_mgdl: -5.0 },
+        GlucoseEffect {
+            start: 0.0,
+            value_mgdl: 0.0,
+        },
+        GlucoseEffect {
+            start: 300.0,
+            value_mgdl: -5.0,
+        },
     ];
     let effects = counteraction_effects(&glucose_samples, &insulin_effects);
     assert_eq!(effects.len(), 0);

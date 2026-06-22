@@ -53,7 +53,14 @@ fn no_change_prediction() -> Vec<(f64, f64)> {
 #[test]
 fn test_no_change_temp_basal() {
     let corr = correction(&no_change_prediction());
-    let rec = recommend_temp_basal(&corr, BASAL_RATE, 0.0, MAX_BOLUS, MAX_BASAL_RATE, MAX_ACTIVE_INSULIN);
+    let rec = recommend_temp_basal(
+        &corr,
+        BASAL_RATE,
+        0.0,
+        MAX_BOLUS,
+        MAX_BASAL_RATE,
+        MAX_ACTIVE_INSULIN,
+    );
     assert!((rec.units_per_hour - BASAL_RATE).abs() < 1e-9);
     assert!((rec.duration - 1800.0).abs() < 1e-9);
 }
@@ -69,9 +76,18 @@ fn test_no_change_auto_dose() {
 #[test]
 fn test_no_change_manual_bolus() {
     let corr = correction(&no_change_prediction());
-    let rec = recommend_manual_bolus(&corr, MAX_BOLUS, TEST_DATE, CURRENT_GLUCOSE, &setup_target());
+    let rec = recommend_manual_bolus(
+        &corr,
+        MAX_BOLUS,
+        TEST_DATE,
+        CURRENT_GLUCOSE,
+        &setup_target(),
+    );
     assert_eq!(rec.amount_iu, 0.0);
-    assert!(matches!(rec.notice, Some(BolusRecommendationNotice::PredictedGlucoseInRange)));
+    assert!(matches!(
+        rec.notice,
+        Some(BolusRecommendationNotice::PredictedGlucoseInRange)
+    ));
 }
 
 // ── testStartHighEndInRange ──────────────────────────────────────────────────
@@ -79,15 +95,25 @@ fn test_no_change_manual_bolus() {
 
 fn start_high_end_in_range_prediction() -> Vec<(f64, f64)> {
     vec![
-        (h(0.0), 200.0), (h(0.5), 180.0), (h(1.0), 150.0),
-        (h(1.5), 120.0), (h(6.2), 100.0),
+        (h(0.0), 200.0),
+        (h(0.5), 180.0),
+        (h(1.0), 150.0),
+        (h(1.5), 120.0),
+        (h(6.2), 100.0),
     ]
 }
 
 #[test]
 fn test_start_high_end_in_range_temp_basal() {
     let corr = correction(&start_high_end_in_range_prediction());
-    let rec = recommend_temp_basal(&corr, BASAL_RATE, 0.0, MAX_BOLUS, MAX_BASAL_RATE, MAX_ACTIVE_INSULIN);
+    let rec = recommend_temp_basal(
+        &corr,
+        BASAL_RATE,
+        0.0,
+        MAX_BOLUS,
+        MAX_BASAL_RATE,
+        MAX_ACTIVE_INSULIN,
+    );
     assert!((rec.units_per_hour - BASAL_RATE).abs() < 1e-9);
     assert!((rec.duration - 1800.0).abs() < 1e-9);
 }
@@ -103,9 +129,18 @@ fn test_start_high_end_in_range_auto_dose() {
 #[test]
 fn test_start_high_end_in_range_manual_bolus() {
     let corr = correction(&start_high_end_in_range_prediction());
-    let rec = recommend_manual_bolus(&corr, MAX_BOLUS, TEST_DATE, CURRENT_GLUCOSE, &setup_target());
+    let rec = recommend_manual_bolus(
+        &corr,
+        MAX_BOLUS,
+        TEST_DATE,
+        CURRENT_GLUCOSE,
+        &setup_target(),
+    );
     assert_eq!(rec.amount_iu, 0.0);
-    assert!(matches!(rec.notice, Some(BolusRecommendationNotice::PredictedGlucoseInRange)));
+    assert!(matches!(
+        rec.notice,
+        Some(BolusRecommendationNotice::PredictedGlucoseInRange)
+    ));
 }
 
 // ── testStartLowEndInRange ───────────────────────────────────────────────────
@@ -113,15 +148,25 @@ fn test_start_high_end_in_range_manual_bolus() {
 
 fn start_low_end_in_range_prediction() -> Vec<(f64, f64)> {
     vec![
-        (h(0.0), 60.0), (h(0.5), 70.0), (h(1.0), 80.0),
-        (h(1.5), 90.0), (h(6.2), 100.0),
+        (h(0.0), 60.0),
+        (h(0.5), 70.0),
+        (h(1.0), 80.0),
+        (h(1.5), 90.0),
+        (h(6.2), 100.0),
     ]
 }
 
 #[test]
 fn test_start_low_end_in_range_temp_basal() {
     let corr = correction(&start_low_end_in_range_prediction());
-    let rec = recommend_temp_basal(&corr, BASAL_RATE, 0.0, MAX_BOLUS, MAX_BASAL_RATE, MAX_ACTIVE_INSULIN);
+    let rec = recommend_temp_basal(
+        &corr,
+        BASAL_RATE,
+        0.0,
+        MAX_BOLUS,
+        MAX_BASAL_RATE,
+        MAX_ACTIVE_INSULIN,
+    );
     assert!((rec.units_per_hour - 1.0).abs() < 1e-9);
     assert!((rec.duration - 1800.0).abs() < 1e-9);
 }
@@ -138,9 +183,18 @@ fn test_start_low_end_in_range_auto_dose() {
 #[test]
 fn test_start_low_end_in_range_manual_bolus() {
     let corr = correction(&start_low_end_in_range_prediction());
-    let rec = recommend_manual_bolus(&corr, MAX_BOLUS, TEST_DATE, CURRENT_GLUCOSE, &setup_target());
+    let rec = recommend_manual_bolus(
+        &corr,
+        MAX_BOLUS,
+        TEST_DATE,
+        CURRENT_GLUCOSE,
+        &setup_target(),
+    );
     assert_eq!(rec.amount_iu, 0.0);
-    assert!(matches!(rec.notice, Some(BolusRecommendationNotice::PredictedGlucoseInRange)));
+    assert!(matches!(
+        rec.notice,
+        Some(BolusRecommendationNotice::PredictedGlucoseInRange)
+    ));
 }
 
 // ── testCorrectLowAtMin ──────────────────────────────────────────────────────
@@ -148,15 +202,25 @@ fn test_start_low_end_in_range_manual_bolus() {
 
 fn correct_low_at_min_prediction() -> Vec<(f64, f64)> {
     vec![
-        (h(0.0), 100.0), (h(0.5), 90.0), (h(1.0), 85.0),
-        (h(1.5), 90.0), (h(6.2), 100.0),
+        (h(0.0), 100.0),
+        (h(0.5), 90.0),
+        (h(1.0), 85.0),
+        (h(1.5), 90.0),
+        (h(6.2), 100.0),
     ]
 }
 
 #[test]
 fn test_correct_low_at_min_temp_basal() {
     let corr = correction(&correct_low_at_min_prediction());
-    let rec = recommend_temp_basal(&corr, BASAL_RATE, 0.0, MAX_BOLUS, MAX_BASAL_RATE, MAX_ACTIVE_INSULIN);
+    let rec = recommend_temp_basal(
+        &corr,
+        BASAL_RATE,
+        0.0,
+        MAX_BOLUS,
+        MAX_BASAL_RATE,
+        MAX_ACTIVE_INSULIN,
+    );
     assert!((rec.units_per_hour - 1.0).abs() < 1e-9);
     assert!((rec.duration - 1800.0).abs() < 1e-9);
 }
@@ -173,9 +237,18 @@ fn test_correct_low_at_min_auto_dose() {
 #[test]
 fn test_correct_low_at_min_manual_bolus() {
     let corr = correction(&correct_low_at_min_prediction());
-    let rec = recommend_manual_bolus(&corr, MAX_BOLUS, TEST_DATE, CURRENT_GLUCOSE, &setup_target());
+    let rec = recommend_manual_bolus(
+        &corr,
+        MAX_BOLUS,
+        TEST_DATE,
+        CURRENT_GLUCOSE,
+        &setup_target(),
+    );
     assert_eq!(rec.amount_iu, 0.0);
-    assert!(matches!(rec.notice, Some(BolusRecommendationNotice::PredictedGlucoseInRange)));
+    assert!(matches!(
+        rec.notice,
+        Some(BolusRecommendationNotice::PredictedGlucoseInRange)
+    ));
 }
 
 // ── testStartHighEndLow ──────────────────────────────────────────────────────
@@ -183,15 +256,25 @@ fn test_correct_low_at_min_manual_bolus() {
 
 fn start_high_end_low_prediction() -> Vec<(f64, f64)> {
     vec![
-        (h(0.0), 200.0), (h(0.5), 160.0), (h(1.0), 120.0),
-        (h(1.5), 80.0), (h(6.2), 60.0),
+        (h(0.0), 200.0),
+        (h(0.5), 160.0),
+        (h(1.0), 120.0),
+        (h(1.5), 80.0),
+        (h(6.2), 60.0),
     ]
 }
 
 #[test]
 fn test_start_high_end_low_temp_basal() {
     let corr = correction(&start_high_end_low_prediction());
-    let rec = recommend_temp_basal(&corr, BASAL_RATE, 0.0, MAX_BOLUS, MAX_BASAL_RATE, MAX_ACTIVE_INSULIN);
+    let rec = recommend_temp_basal(
+        &corr,
+        BASAL_RATE,
+        0.0,
+        MAX_BOLUS,
+        MAX_BASAL_RATE,
+        MAX_ACTIVE_INSULIN,
+    );
     assert!((rec.units_per_hour - 0.0).abs() < 1e-9);
     assert!((rec.duration - 1800.0).abs() < 1e-9);
 }
@@ -208,10 +291,18 @@ fn test_start_high_end_low_auto_dose() {
 #[test]
 fn test_start_high_end_low_manual_bolus() {
     let corr = correction(&start_high_end_low_prediction());
-    let rec = recommend_manual_bolus(&corr, MAX_BOLUS, TEST_DATE, CURRENT_GLUCOSE, &setup_target());
+    let rec = recommend_manual_bolus(
+        &corr,
+        MAX_BOLUS,
+        TEST_DATE,
+        CURRENT_GLUCOSE,
+        &setup_target(),
+    );
     assert!((rec.amount_iu - 0.0).abs() < 1e-9);
     match &rec.notice {
-        Some(BolusRecommendationNotice::AllGlucoseBelowTarget { min_glucose_mgdl, .. }) => {
+        Some(BolusRecommendationNotice::AllGlucoseBelowTarget {
+            min_glucose_mgdl, ..
+        }) => {
             assert!((min_glucose_mgdl - 60.0).abs() < 1.0);
         }
         other => panic!("Expected AllGlucoseBelowTarget, got {:?}", other),
@@ -223,15 +314,25 @@ fn test_start_high_end_low_manual_bolus() {
 
 fn start_low_end_high_prediction() -> Vec<(f64, f64)> {
     vec![
-        (h(0.0), 60.0), (h(0.5), 80.0), (h(1.0), 120.0),
-        (h(1.5), 160.0), (h(6.2), 200.0),
+        (h(0.0), 60.0),
+        (h(0.5), 80.0),
+        (h(1.0), 120.0),
+        (h(1.5), 160.0),
+        (h(6.2), 200.0),
     ]
 }
 
 #[test]
 fn test_start_low_end_high_temp_basal() {
     let corr = correction(&start_low_end_high_prediction());
-    let rec = recommend_temp_basal(&corr, BASAL_RATE, 0.0, MAX_BOLUS, MAX_BASAL_RATE, MAX_ACTIVE_INSULIN);
+    let rec = recommend_temp_basal(
+        &corr,
+        BASAL_RATE,
+        0.0,
+        MAX_BOLUS,
+        MAX_BASAL_RATE,
+        MAX_ACTIVE_INSULIN,
+    );
     assert!((rec.units_per_hour - 1.0).abs() < 0.05);
     assert!((rec.duration - 1800.0).abs() < 1e-9);
 }
@@ -248,10 +349,18 @@ fn test_start_low_end_high_auto_dose() {
 #[test]
 fn test_start_low_end_high_manual_bolus() {
     let corr = correction(&start_low_end_high_prediction());
-    let rec = recommend_manual_bolus(&corr, MAX_BOLUS, TEST_DATE, CURRENT_GLUCOSE, &setup_target());
+    let rec = recommend_manual_bolus(
+        &corr,
+        MAX_BOLUS,
+        TEST_DATE,
+        CURRENT_GLUCOSE,
+        &setup_target(),
+    );
     assert!((rec.amount_iu - 1.6).abs() < 0.05);
     match &rec.notice {
-        Some(BolusRecommendationNotice::PredictedGlucoseBelowTarget { min_glucose_mgdl, .. }) => {
+        Some(BolusRecommendationNotice::PredictedGlucoseBelowTarget {
+            min_glucose_mgdl, ..
+        }) => {
             assert!((min_glucose_mgdl - 60.0).abs() < 1.0);
         }
         other => panic!("Expected PredictedGlucoseBelowTarget, got {:?}", other),
@@ -268,7 +377,14 @@ fn flat_and_high_prediction() -> Vec<(f64, f64)> {
 #[test]
 fn test_flat_and_high_temp_basal() {
     let corr = correction(&flat_and_high_prediction());
-    let rec = recommend_temp_basal(&corr, BASAL_RATE, 0.0, MAX_BOLUS, MAX_BASAL_RATE, MAX_ACTIVE_INSULIN);
+    let rec = recommend_temp_basal(
+        &corr,
+        BASAL_RATE,
+        0.0,
+        MAX_BOLUS,
+        MAX_BASAL_RATE,
+        MAX_ACTIVE_INSULIN,
+    );
     assert!((rec.units_per_hour - 3.0).abs() < 0.05);
     assert!((rec.duration - 1800.0).abs() < 1e-9);
 }
@@ -285,7 +401,13 @@ fn test_flat_and_high_auto_dose() {
 #[test]
 fn test_flat_and_high_manual_bolus() {
     let corr = correction(&flat_and_high_prediction());
-    let rec = recommend_manual_bolus(&corr, MAX_BOLUS, TEST_DATE, CURRENT_GLUCOSE, &setup_target());
+    let rec = recommend_manual_bolus(
+        &corr,
+        MAX_BOLUS,
+        TEST_DATE,
+        CURRENT_GLUCOSE,
+        &setup_target(),
+    );
     assert!((rec.amount_iu - 1.6).abs() < 0.05);
     assert!(rec.notice.is_none());
 }
@@ -295,15 +417,25 @@ fn test_flat_and_high_manual_bolus() {
 
 fn high_and_falling_prediction() -> Vec<(f64, f64)> {
     vec![
-        (h(0.0), 240.0), (h(1.0), 220.0), (h(2.0), 200.0),
-        (h(3.0), 160.0), (h(6.2), 124.0),
+        (h(0.0), 240.0),
+        (h(1.0), 220.0),
+        (h(2.0), 200.0),
+        (h(3.0), 160.0),
+        (h(6.2), 124.0),
     ]
 }
 
 #[test]
 fn test_high_and_falling_temp_basal() {
     let corr = correction(&high_and_falling_prediction());
-    let rec = recommend_temp_basal(&corr, BASAL_RATE, 0.0, MAX_BOLUS, MAX_BASAL_RATE, MAX_ACTIVE_INSULIN);
+    let rec = recommend_temp_basal(
+        &corr,
+        BASAL_RATE,
+        0.0,
+        MAX_BOLUS,
+        MAX_BASAL_RATE,
+        MAX_ACTIVE_INSULIN,
+    );
     assert!((rec.units_per_hour - 1.63).abs() < 0.05);
     assert!((rec.duration - 1800.0).abs() < 1e-9);
 }
@@ -320,7 +452,13 @@ fn test_high_and_falling_auto_dose() {
 #[test]
 fn test_high_and_falling_manual_bolus() {
     let corr = correction(&high_and_falling_prediction());
-    let rec = recommend_manual_bolus(&corr, MAX_BOLUS, TEST_DATE, CURRENT_GLUCOSE, &setup_target());
+    let rec = recommend_manual_bolus(
+        &corr,
+        MAX_BOLUS,
+        TEST_DATE,
+        CURRENT_GLUCOSE,
+        &setup_target(),
+    );
     assert!((rec.amount_iu - 0.30).abs() < 0.05);
     assert!(rec.notice.is_none());
 }
@@ -330,15 +468,25 @@ fn test_high_and_falling_manual_bolus() {
 
 fn in_range_and_rising_prediction() -> Vec<(f64, f64)> {
     vec![
-        (h(0.0), 90.0), (h(1.0), 100.0), (h(2.0), 110.0),
-        (h(3.0), 120.0), (h(6.2), 125.0),
+        (h(0.0), 90.0),
+        (h(1.0), 100.0),
+        (h(2.0), 110.0),
+        (h(3.0), 120.0),
+        (h(6.2), 125.0),
     ]
 }
 
 #[test]
 fn test_in_range_and_rising_temp_basal() {
     let corr = correction(&in_range_and_rising_prediction());
-    let rec = recommend_temp_basal(&corr, BASAL_RATE, 0.0, MAX_BOLUS, MAX_BASAL_RATE, MAX_ACTIVE_INSULIN);
+    let rec = recommend_temp_basal(
+        &corr,
+        BASAL_RATE,
+        0.0,
+        MAX_BOLUS,
+        MAX_BASAL_RATE,
+        MAX_ACTIVE_INSULIN,
+    );
     assert!((rec.units_per_hour - 1.63).abs() < 0.05);
     assert!((rec.duration - 1800.0).abs() < 1e-9);
 }
@@ -355,7 +503,13 @@ fn test_in_range_and_rising_auto_dose() {
 #[test]
 fn test_in_range_and_rising_manual_bolus() {
     let corr = correction(&in_range_and_rising_prediction());
-    let rec = recommend_manual_bolus(&corr, MAX_BOLUS, TEST_DATE, CURRENT_GLUCOSE, &setup_target());
+    let rec = recommend_manual_bolus(
+        &corr,
+        MAX_BOLUS,
+        TEST_DATE,
+        CURRENT_GLUCOSE,
+        &setup_target(),
+    );
     assert!((rec.amount_iu - 0.30).abs() < 0.05);
     assert!(rec.notice.is_none());
 }
@@ -365,15 +519,25 @@ fn test_in_range_and_rising_manual_bolus() {
 
 fn high_and_rising_prediction() -> Vec<(f64, f64)> {
     vec![
-        (h(0.0), 140.0), (h(1.0), 150.0), (h(2.0), 160.0),
-        (h(3.0), 170.0), (h(6.2), 180.0),
+        (h(0.0), 140.0),
+        (h(1.0), 150.0),
+        (h(2.0), 160.0),
+        (h(3.0), 170.0),
+        (h(6.2), 180.0),
     ]
 }
 
 #[test]
 fn test_high_and_rising_temp_basal() {
     let corr = correction(&high_and_rising_prediction());
-    let rec = recommend_temp_basal(&corr, BASAL_RATE, 0.0, MAX_BOLUS, MAX_BASAL_RATE, MAX_ACTIVE_INSULIN);
+    let rec = recommend_temp_basal(
+        &corr,
+        BASAL_RATE,
+        0.0,
+        MAX_BOLUS,
+        MAX_BASAL_RATE,
+        MAX_ACTIVE_INSULIN,
+    );
     assert!((rec.units_per_hour - 3.0).abs() < 0.05);
     assert!((rec.duration - 1800.0).abs() < 1e-9);
 }
@@ -390,7 +554,13 @@ fn test_high_and_rising_auto_dose() {
 #[test]
 fn test_high_and_rising_manual_bolus() {
     let corr = correction(&high_and_rising_prediction());
-    let rec = recommend_manual_bolus(&corr, MAX_BOLUS, TEST_DATE, CURRENT_GLUCOSE, &setup_target());
+    let rec = recommend_manual_bolus(
+        &corr,
+        MAX_BOLUS,
+        TEST_DATE,
+        CURRENT_GLUCOSE,
+        &setup_target(),
+    );
     assert!((rec.amount_iu - 1.25).abs() < 0.05);
     assert!(rec.notice.is_none());
 }
@@ -400,15 +570,25 @@ fn test_high_and_rising_manual_bolus() {
 
 fn very_low_and_rising_prediction() -> Vec<(f64, f64)> {
     vec![
-        (h(0.0), 60.0), (h(1.0), 50.0), (h(2.0), 60.0),
-        (h(3.0), 70.0), (h(6.2), 100.0),
+        (h(0.0), 60.0),
+        (h(1.0), 50.0),
+        (h(2.0), 60.0),
+        (h(3.0), 70.0),
+        (h(6.2), 100.0),
     ]
 }
 
 #[test]
 fn test_very_low_and_rising_temp_basal() {
     let corr = correction(&very_low_and_rising_prediction());
-    let rec = recommend_temp_basal(&corr, BASAL_RATE, 0.0, MAX_BOLUS, MAX_BASAL_RATE, MAX_ACTIVE_INSULIN);
+    let rec = recommend_temp_basal(
+        &corr,
+        BASAL_RATE,
+        0.0,
+        MAX_BOLUS,
+        MAX_BASAL_RATE,
+        MAX_ACTIVE_INSULIN,
+    );
     assert!((rec.units_per_hour - 0.0).abs() < 0.05);
     assert!((rec.duration - 1800.0).abs() < 1e-9);
 }
@@ -425,10 +605,18 @@ fn test_very_low_and_rising_auto_dose() {
 #[test]
 fn test_very_low_and_rising_manual_bolus() {
     let corr = correction(&very_low_and_rising_prediction());
-    let rec = recommend_manual_bolus(&corr, MAX_BOLUS, TEST_DATE, CURRENT_GLUCOSE, &setup_target());
+    let rec = recommend_manual_bolus(
+        &corr,
+        MAX_BOLUS,
+        TEST_DATE,
+        CURRENT_GLUCOSE,
+        &setup_target(),
+    );
     assert!((rec.amount_iu - 0.0).abs() < 0.05);
     match &rec.notice {
-        Some(BolusRecommendationNotice::GlucoseBelowSuspendThreshold { min_glucose_mgdl, .. }) => {
+        Some(BolusRecommendationNotice::GlucoseBelowSuspendThreshold {
+            min_glucose_mgdl, ..
+        }) => {
             assert!((min_glucose_mgdl - 50.0).abs() < 1.0);
         }
         other => panic!("Expected GlucoseBelowSuspendThreshold, got {:?}", other),
