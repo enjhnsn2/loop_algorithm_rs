@@ -1,3 +1,5 @@
+#![no_std]
+
 pub mod algorithm;
 pub mod carbs;
 pub mod dose;
