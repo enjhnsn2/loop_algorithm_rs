@@ -20,7 +20,7 @@ pub fn ceil_to(t: Timestamp, interval: f64) -> Timestamp {
 // ── Schedule ─────────────────────────────────────────────────────────────────
 
 /// A value valid over `[start, end)`.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default, Copy)]
 pub struct ScheduleEntry<T> {
     pub start: Timestamp,
     pub end: Timestamp,

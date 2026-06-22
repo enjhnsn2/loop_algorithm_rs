@@ -2,7 +2,7 @@ use crate::types::{simulation_date_range, GlucoseEffect, GlucoseEffectVelocity, 
 
 // ── Glucose sample ────────────────────────────────────────────────────────────
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default, Copy)]
 pub struct GlucoseSample {
     pub start: Timestamp,
     pub value_mgdl: f64,

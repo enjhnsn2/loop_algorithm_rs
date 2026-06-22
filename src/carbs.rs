@@ -123,7 +123,7 @@ impl CarbAbsorptionModel {
 
 // ── Carb entry ────────────────────────────────────────────────────────────────
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default, Copy)]
 pub struct CarbEntry {
     pub start: Timestamp,
     pub grams: f64,
