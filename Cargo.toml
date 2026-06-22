@@ -3,3 +3,6 @@ name = "loop_algorithm"
 version = "0.1.0"
 edition = "2021"
 
+[dependencies]
+libm = "0.2.16"
+heapless = "0.9.3"
