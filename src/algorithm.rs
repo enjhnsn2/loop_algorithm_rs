@@ -178,7 +178,7 @@ impl core::fmt::Display for AlgorithmError {
     }
 }
 
-impl std::error::Error for AlgorithmError {}
+impl core::error::Error for AlgorithmError {}
 
 // ── predict_glucose: combine effects into prediction ─────────────────────────
 
@@ -190,7 +190,7 @@ impl std::error::Error for AlgorithmError {}
 struct OrdF64(f64);
 impl Eq for OrdF64 {}
 impl Ord for OrdF64 {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
         // SAFETY: values are always finite (floor/ceil of finite timestamps).
         self.0.partial_cmp(&other.0).unwrap()
     }
