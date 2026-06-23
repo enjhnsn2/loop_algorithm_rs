@@ -7,7 +7,22 @@ use loop_algorithm::{
         InsulinDeliveryType, InsulinDose, ModelPreset, DEFAULT_INSULIN_ACTIVITY_DURATION, DELTA,
     },
     types::{ceil_to, ScheduleEntry},
+    VEC_SIZE,
 };
+
+/// Build a fixed-capacity `heapless::Vec<_, VEC_SIZE>` from a list of elements,
+/// the `no_std` stand-in for `hvec![…]` in these tests.
+macro_rules! hvec {
+    () => {{
+        let v: heapless::Vec<_, VEC_SIZE> = heapless::Vec::new();
+        v
+    }};
+    ($($x:expr),+ $(,)?) => {{
+        let mut v: heapless::Vec<_, VEC_SIZE> = heapless::Vec::new();
+        $( v.push($x).unwrap(); )+
+        v
+    }};
+}
 
 // 2024-01-03T12:00:00Z
 const NOW: f64 = 1704283200.0;
@@ -20,7 +35,7 @@ fn mock_input(now: f64) -> AlgorithmInput {
     let forecast_end = ceil_to(now + DEFAULT_INSULIN_ACTIVITY_DURATION, DELTA);
     AlgorithmInput::new(
         now,
-        vec![
+        hvec![
             GlucoseSample {
                 start: now - 19.0 * 60.0,
                 value_mgdl: 100.0,
@@ -46,12 +61,12 @@ fn mock_input(now: f64) -> AlgorithmInput {
                 is_display_only: false,
             },
         ],
-        vec![],
-        vec![],
-        vec![ScheduleEntry::new(now - 36000.0, now, 1.0)],
-        vec![ScheduleEntry::new(now - 36000.0, forecast_end, 55.0)],
-        vec![ScheduleEntry::new(now - 36000.0, now, 10.0)],
-        vec![ScheduleEntry::new(now - 36000.0, now, (100.0, 110.0))],
+        hvec![],
+        hvec![],
+        hvec![ScheduleEntry::new(now - 36000.0, now, 1.0)],
+        hvec![ScheduleEntry::new(now - 36000.0, forecast_end, 55.0)],
+        hvec![ScheduleEntry::new(now - 36000.0, now, 10.0)],
+        hvec![ScheduleEntry::new(now - 36000.0, now, (100.0, 110.0))],
         Some(65.0),
         6.0,
         8.0,
@@ -77,11 +92,14 @@ fn bolus_dose(now: f64, start_offset: f64, end_offset: f64, volume_iu: f64) -> I
 fn test_algorithm_with_long_absorbing_carbs() {
     let mut input = mock_input(NOW);
     input.recommendation_type = DoseRecommendationType::ManualBolus;
-    input.carb_entries.push(CarbEntry {
-        start: NOW,
-        grams: 50.0,
-        absorption_time: Some(6.0 * 3600.0),
-    });
+    input
+        .carb_entries
+        .push(CarbEntry {
+            start: NOW,
+            grams: 50.0,
+            absorption_time: Some(6.0 * 3600.0),
+        })
+        .unwrap();
 
     let output = run(&input);
 
@@ -104,16 +122,20 @@ fn test_algorithm_should_be_date_independent() {
     let mut b = mock_input(now - 150.0); // now - 2.5 min
 
     // 10g carb 30min before prediction start
-    a.carb_entries.push(CarbEntry {
-        start: a.prediction_start - 30.0 * 60.0,
-        grams: 10.0,
-        absorption_time: None,
-    });
-    b.carb_entries.push(CarbEntry {
-        start: b.prediction_start - 30.0 * 60.0,
-        grams: 10.0,
-        absorption_time: None,
-    });
+    a.carb_entries
+        .push(CarbEntry {
+            start: a.prediction_start - 30.0 * 60.0,
+            grams: 10.0,
+            absorption_time: None,
+        })
+        .unwrap();
+    b.carb_entries
+        .push(CarbEntry {
+            start: b.prediction_start - 30.0 * 60.0,
+            grams: 10.0,
+            absorption_time: None,
+        })
+        .unwrap();
 
     let output_a = run(&a);
     let output_b = run(&b);
@@ -208,7 +230,7 @@ fn test_spurious_reading_disables_rc_and_momentum() {
     let base = NOW;
     let mut input = mock_input(base + 30.0 * 60.0);
 
-    input.glucose_history = vec![
+    input.glucose_history = hvec![
         GlucoseSample {
             start: base,
             value_mgdl: 100.0,
@@ -291,7 +313,7 @@ fn test_mid_absorption_isf_flag() {
     let mut input = mock_input(now);
     let forecast_end = ceil_to(now + DEFAULT_INSULIN_ACTIVITY_DURATION, DELTA);
 
-    input.doses = vec![InsulinDose {
+    input.doses = hvec![InsulinDose {
         delivery_type: InsulinDeliveryType::Bolus,
         start: now,
         end: now + 20.0,
@@ -300,7 +322,7 @@ fn test_mid_absorption_isf_flag() {
     }];
 
     let isf_mid = now + 1.5 * 3600.0;
-    input.sensitivity_schedule = vec![
+    input.sensitivity_schedule = hvec![
         ScheduleEntry::new(now - 86400.0, isf_mid, 50.0),
         ScheduleEntry::new(isf_mid, forecast_end, 100.0),
     ];
@@ -345,8 +367,8 @@ fn test_auto_bolus_max_iob_clamping() {
     let mut input = mock_input(now);
     input.recommendation_type = DoseRecommendationType::AutomaticBolus;
 
-    input.doses = vec![bolus_dose(now, -5.0 * 60.0, -4.0 * 60.0, 8.0)];
-    input.carb_entries = vec![CarbEntry {
+    input.doses = hvec![bolus_dose(now, -5.0 * 60.0, -4.0 * 60.0, 8.0)];
+    input.carb_entries = hvec![CarbEntry {
         start: now - 5.0 * 60.0,
         grams: 100.0,
         absorption_time: None,
@@ -406,8 +428,8 @@ fn test_temp_basal_max_iob_clamping() {
     let mut input = mock_input(now);
     input.recommendation_type = DoseRecommendationType::TempBasal;
 
-    input.doses = vec![bolus_dose(now, -5.0 * 60.0, -4.0 * 60.0, 8.0)];
-    input.carb_entries = vec![CarbEntry {
+    input.doses = hvec![bolus_dose(now, -5.0 * 60.0, -4.0 * 60.0, 8.0)];
+    input.carb_entries = hvec![CarbEntry {
         start: now - 5.0 * 60.0,
         grams: 100.0,
         absorption_time: None,
@@ -467,11 +489,11 @@ fn test_recommendation_with_mid_absorption_isf() {
     let mut input = mock_input(now);
     input.recommendation_type = DoseRecommendationType::ManualBolus;
     input.max_bolus = 8.0;
-    input.doses = vec![];
-    input.carb_entries = vec![];
+    input.doses = hvec![];
+    input.carb_entries = hvec![];
 
     let isf_change_time = now + 3600.0;
-    input.sensitivity_schedule = vec![
+    input.sensitivity_schedule = hvec![
         ScheduleEntry::new(now - 48.0 * 3600.0, isf_change_time, 50.0),
         ScheduleEntry::new(isf_change_time, now + 48.0 * 3600.0, 100.0),
     ];
@@ -508,7 +530,7 @@ fn test_incomplete_isf_timeline_starts_too_late() {
 
     let basal_start = now - 5.0 * 60.0;
     let basal_end = now + 30.0 * 60.0;
-    input.doses = vec![InsulinDose {
+    input.doses = hvec![InsulinDose {
         delivery_type: InsulinDeliveryType::Basal,
         start: basal_start,
         end: basal_end,
@@ -516,7 +538,7 @@ fn test_incomplete_isf_timeline_starts_too_late() {
         model: ModelPreset::RapidActingAdult.model(),
     }];
 
-    input.glucose_history = vec![GlucoseSample {
+    input.glucose_history = hvec![GlucoseSample {
         start: now - 60.0,
         value_mgdl: 105.0,
         provenance: 0,
@@ -525,7 +547,7 @@ fn test_incomplete_isf_timeline_starts_too_late() {
 
     // Sensitivity doesn't cover start of basal dose (starts at `now`, but dose starts at now-5min)
     let forecast_end = ceil_to(now + DEFAULT_INSULIN_ACTIVITY_DURATION, DELTA);
-    input.sensitivity_schedule = vec![ScheduleEntry::new(now, forecast_end, 50.0)];
+    input.sensitivity_schedule = hvec![ScheduleEntry::new(now, forecast_end, 50.0)];
 
     let output = run(&input);
     assert!(

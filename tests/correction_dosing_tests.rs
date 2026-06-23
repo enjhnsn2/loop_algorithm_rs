@@ -1,6 +1,6 @@
 use loop_algorithm::dose::{
     insulin_correction, recommend_automatic_dose, recommend_manual_bolus, recommend_temp_basal,
-    BolusRecommendationNotice, InsulinCorrection,
+    BolusRecommendationNotice, GlucoseRangeTimeline, InsulinCorrection,
 };
 use loop_algorithm::insulin::ModelPreset;
 use loop_algorithm::types::ScheduleEntry;
@@ -12,8 +12,11 @@ fn h(hours: f64) -> f64 {
     TEST_DATE + hours * 3600.0
 }
 
-fn setup_target() -> Vec<ScheduleEntry<(f64, f64)>> {
-    vec![ScheduleEntry::new(h(-24.0), h(24.0), (90.0, 120.0))]
+fn setup_target() -> GlucoseRangeTimeline {
+    let mut v = GlucoseRangeTimeline::new();
+    v.push(ScheduleEntry::new(h(-24.0), h(24.0), (90.0, 120.0)))
+        .unwrap();
+    v
 }
 
 fn setup_isf() -> Vec<ScheduleEntry<f64>> {
