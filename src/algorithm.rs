@@ -1,5 +1,4 @@
 use heapless::Vec;
-use std::collections::BTreeMap;
 
 use crate::{
     carbs::{
@@ -184,7 +183,7 @@ impl std::error::Error for AlgorithmError {}
 // ── predict_glucose: combine effects into prediction ─────────────────────────
 
 /// An `OrdF64` is a totally-ordered wrapper for finite f64 values.
-/// Used as BTreeMap keys when accumulating glucose effects by timestamp.
+/// Used as sorted-map keys when accumulating glucose effects by timestamp.
 ///
 /// SAFETY: We only insert timestamps produced by floor_to/ceil_to (always finite).
 #[derive(Clone, Copy, PartialEq, PartialOrd)]
@@ -195,6 +194,37 @@ impl Ord for OrdF64 {
         // SAFETY: values are always finite (floor/ceil of finite timestamps).
         self.0.partial_cmp(&other.0).unwrap()
     }
+}
+
+/// A `(timestamp, value)` map kept sorted by key, replacing `BTreeMap` for `no_std`.
+/// Insert/lookup are `O(log n)` via binary search; iteration is naturally key-ordered.
+type EffectDeltas = Vec<(OrdF64, f64), VEC_SIZE>;
+
+/// Add `delta` to the entry at `key`, inserting a new (sorted) entry if absent.
+fn accumulate_delta(map: &mut EffectDeltas, key: OrdF64, delta: f64) {
+    match map.binary_search_by(|(k, _)| k.cmp(&key)) {
+        Ok(i) => map[i].1 += delta,
+        Err(i) => {
+            let _ = map.insert(i, (key, delta));
+        }
+    }
+}
+
+/// Overwrite the entry at `key` with `value`, inserting a new (sorted) entry if absent.
+fn set_delta(map: &mut EffectDeltas, key: OrdF64, value: f64) {
+    match map.binary_search_by(|(k, _)| k.cmp(&key)) {
+        Ok(i) => map[i].1 = value,
+        Err(i) => {
+            let _ = map.insert(i, (key, value));
+        }
+    }
+}
+
+/// Look up the value stored at `key`.
+fn get_delta(map: &EffectDeltas, key: OrdF64) -> Option<f64> {
+    map.binary_search_by(|(k, _)| k.cmp(&key))
+        .ok()
+        .map(|i| map[i].1)
 }
 
 /// Combine insulin, carb, RC, and momentum effects into a glucose prediction.
@@ -209,13 +239,13 @@ pub fn predict_glucose(
     effects: &[&[GlucoseEffect]],
 ) -> Vec<PredictedGlucose, VEC_SIZE> {
     // Accumulate deltas at each timestamp
-    let mut effect_deltas: BTreeMap<OrdF64, f64> = BTreeMap::new();
+    let mut effect_deltas: EffectDeltas = Vec::new();
 
     for timeline in effects {
         let mut prev = timeline.first().map(|e| e.value_mgdl).unwrap_or(0.0);
         for effect in *timeline {
             let delta = effect.value_mgdl - prev;
-            *effect_deltas.entry(OrdF64(effect.start)).or_default() += delta;
+            accumulate_delta(&mut effect_deltas, OrdF64(effect.start), delta);
             prev = effect.value_mgdl;
         }
     }
@@ -239,12 +269,9 @@ pub fn predict_glucose(
                 0.0f64.max((momentum.len() - i) as f64 / blend_count - blend_slope + blend_offset),
             ))
             .clamp(0.0, 1.0);
-            let existing = effect_deltas
-                .get(&OrdF64(effect.start))
-                .copied()
-                .unwrap_or(0.0);
+            let existing = get_delta(&effect_deltas, OrdF64(effect.start)).unwrap_or(0.0);
             let blended = (1.0 - split) * existing + split * mom_delta;
-            effect_deltas.insert(OrdF64(effect.start), blended);
+            set_delta(&mut effect_deltas, OrdF64(effect.start), blended);
             prev_mom = effect.value_mgdl;
         }
     }
