@@ -25,4 +25,4 @@ pub use types::{
     GlucoseChange, GlucoseEffect, GlucoseEffectVelocity, PredictedGlucose, ScheduleEntry, Timestamp,
 };
 
-pub const VEC_SIZE: usize = 4096;
+pub const VEC_SIZE: usize = 512;
