@@ -2,6 +2,8 @@ use crate::types::{
     closest_prior, filter_date_range, floor_to, simulation_date_range, GlucoseEffect, InsulinValue,
     ScheduleEntry, Timestamp,
 };
+use crate::VEC_SIZE;
+use heapless::Vec;
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -248,9 +250,9 @@ impl BasalRelativeDose {
 fn annotate_basal_dose(
     dose: &InsulinDose,
     basal_history: &[ScheduleEntry<f64>],
-) -> Vec<BasalRelativeDose> {
+) -> Vec<BasalRelativeDose, VEC_SIZE> {
     let n = basal_history.len();
-    let mut out = Vec::new();
+    let mut out: Vec<BasalRelativeDose, VEC_SIZE> = Vec::new();
     for (i, entry) in basal_history.iter().enumerate() {
         let seg_start = if i == 0 { dose.start } else { entry.start };
         let seg_end = if i == n - 1 {
@@ -266,7 +268,7 @@ fn annotate_basal_dose(
         } else {
             0.0
         };
-        out.push(BasalRelativeDose {
+        let _ = out.push(BasalRelativeDose {
             dose_type: BasalDoseType::Basal {
                 scheduled_rate_iuhr: entry.value,
             },
@@ -287,8 +289,8 @@ pub fn annotated_doses(
     doses: &[InsulinDose],
     basal_history: &[ScheduleEntry<f64>],
     fill_basal_gaps: bool,
-) -> Vec<BasalRelativeDose> {
-    let mut out: Vec<BasalRelativeDose> = Vec::new();
+) -> Vec<BasalRelativeDose, VEC_SIZE> {
+    let mut out: Vec<BasalRelativeDose, VEC_SIZE> = Vec::new();
 
     if !fill_basal_gaps {
         if doses.is_empty() {
@@ -297,10 +299,11 @@ pub fn annotated_doses(
         for dose in doses {
             if dose.delivery_type == InsulinDeliveryType::Basal {
                 let items = filter_date_range(basal_history, Some(dose.start), Some(dose.end));
-                let owned: Vec<ScheduleEntry<f64>> = items.into_iter().cloned().collect();
+                let owned: Vec<ScheduleEntry<f64>, VEC_SIZE> =
+                    items.into_iter().cloned().collect();
                 out.extend(annotate_basal_dose(dose, &owned));
             } else {
-                out.push(BasalRelativeDose {
+                let _ = out.push(BasalRelativeDose {
                     dose_type: BasalDoseType::Bolus,
                     start: dose.start,
                     end: dose.end,
@@ -313,7 +316,7 @@ pub fn annotated_doses(
     }
 
     // fill_basal_gaps = true
-    let basal_doses: Vec<&InsulinDose> = doses
+    let basal_doses: Vec<&InsulinDose, VEC_SIZE> = doses
         .iter()
         .filter(|d| d.delivery_type == InsulinDeliveryType::Basal)
         .collect();
@@ -342,12 +345,12 @@ pub fn annotated_doses(
                 volume_iu: e.value * (e.end - e.start) / 3600.0,
                 model: ModelPreset::RapidActingAdult.model(),
             })
-            .collect::<Vec<_>>()
+            .collect::<Vec<_, VEC_SIZE>>()
     };
 
     for dose in doses {
         if dose.delivery_type != InsulinDeliveryType::Basal {
-            out.push(BasalRelativeDose {
+            let _ = out.push(BasalRelativeDose {
                 dose_type: BasalDoseType::Bolus,
                 start: dose.start,
                 end: dose.end,
@@ -359,7 +362,7 @@ pub fn annotated_doses(
         if cursor < dose.start {
             out.extend(fill_gap(cursor, dose.start, basal_history));
         }
-        let items: Vec<ScheduleEntry<f64>> =
+        let items: Vec<ScheduleEntry<f64>, VEC_SIZE> =
             filter_date_range(basal_history, Some(dose.start), Some(dose.end))
                 .into_iter()
                 .cloned()
@@ -391,9 +394,9 @@ pub fn iob_timeline(
     from: Option<Timestamp>,
     to: Option<Timestamp>,
     delta: f64,
-) -> Vec<InsulinValue> {
-    let starts: Vec<_> = doses.iter().map(|d| d.start).collect();
-    let ends: Vec<_> = doses
+) -> Vec<InsulinValue, VEC_SIZE> {
+    let starts: Vec<_, VEC_SIZE> = doses.iter().map(|d| d.start).collect();
+    let ends: Vec<_, VEC_SIZE> = doses
         .iter()
         .map(|d| d.end + d.model.effect_duration())
         .collect();
@@ -405,13 +408,13 @@ pub fn iob_timeline(
         DEFAULT_INSULIN_ACTIVITY_DURATION,
         delta,
     ) else {
-        return vec![];
+        return Vec::new();
     };
     let mut t = start;
-    let mut out = Vec::new();
+    let mut out: Vec<InsulinValue, VEC_SIZE> = Vec::new();
     while t <= end {
         let iob = doses.iter().map(|d| d.insulin_on_board(t, delta)).sum();
-        out.push(InsulinValue {
+        let _ = out.push(InsulinValue {
             start: t,
             value_iu: iob,
         });
@@ -432,13 +435,13 @@ pub fn glucose_effects(
     from: Option<Timestamp>,
     to: Option<Timestamp>,
     delta: f64,
-) -> Vec<GlucoseEffect> {
-    let active: Vec<&BasalRelativeDose> = doses
+) -> Vec<GlucoseEffect, VEC_SIZE> {
+    let active: Vec<&BasalRelativeDose, VEC_SIZE> = doses
         .iter()
         .filter(|d| d.net_basal_units() != 0.0)
         .collect();
-    let starts: Vec<_> = active.iter().map(|d| d.start).collect();
-    let ends: Vec<_> = active
+    let starts: Vec<_, VEC_SIZE> = active.iter().map(|d| d.start).collect();
+    let ends: Vec<_, VEC_SIZE> = active
         .iter()
         .map(|d| d.end + d.model.effect_duration())
         .collect();
@@ -450,11 +453,11 @@ pub fn glucose_effects(
         DEFAULT_INSULIN_ACTIVITY_DURATION,
         delta,
     ) else {
-        return vec![];
+        return Vec::new();
     };
 
     let mut t = start;
-    let mut out = Vec::new();
+    let mut out: Vec<GlucoseEffect, VEC_SIZE> = Vec::new();
     while t <= end {
         let value: f64 = doses
             .iter()
@@ -465,7 +468,7 @@ pub fn glucose_effects(
                 dose.glucose_effect(t, isf, delta)
             })
             .sum();
-        out.push(GlucoseEffect {
+        let _ = out.push(GlucoseEffect {
             start: t,
             value_mgdl: value,
         });
@@ -482,13 +485,13 @@ pub fn glucose_effects_mid_absorption_isf(
     from: Option<Timestamp>,
     to: Option<Timestamp>,
     delta: f64,
-) -> Vec<GlucoseEffect> {
-    let active: Vec<&BasalRelativeDose> = doses
+) -> Vec<GlucoseEffect, VEC_SIZE> {
+    let active: Vec<&BasalRelativeDose, VEC_SIZE> = doses
         .iter()
         .filter(|d| d.net_basal_units() != 0.0)
         .collect();
-    let starts: Vec<_> = active.iter().map(|d| d.start).collect();
-    let ends: Vec<_> = active
+    let starts: Vec<_, VEC_SIZE> = active.iter().map(|d| d.start).collect();
+    let ends: Vec<_, VEC_SIZE> = active
         .iter()
         .map(|d| d.end + d.model.effect_duration())
         .collect();
@@ -500,13 +503,13 @@ pub fn glucose_effects_mid_absorption_isf(
         DEFAULT_INSULIN_ACTIVITY_DURATION,
         delta,
     ) else {
-        return vec![];
+        return Vec::new();
     };
 
     let mut last_t = start;
     let mut t = start;
     let mut cumulative = 0.0f64;
-    let mut out = Vec::new();
+    let mut out: Vec<GlucoseEffect, VEC_SIZE> = Vec::new();
     while t <= end {
         if t != last_t {
             let delta_val: f64 = doses
@@ -529,7 +532,7 @@ pub fn glucose_effects_mid_absorption_isf(
                 .sum();
             cumulative += delta_val;
         }
-        out.push(GlucoseEffect {
+        let _ = out.push(GlucoseEffect {
             start: t,
             value_mgdl: cumulative,
         });

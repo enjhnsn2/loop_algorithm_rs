@@ -1,4 +1,6 @@
 use crate::types::{closest_prior, ScheduleEntry, Timestamp};
+use crate::VEC_SIZE;
+use heapless::Vec;
 
 // ── Recommendation types ──────────────────────────────────────────────────────
 
@@ -89,7 +91,7 @@ impl DoseRecommendation {
 
 /// `(min, max)` in mg/dL.
 pub type GlucoseRange = (f64, f64);
-pub type GlucoseRangeTimeline = Vec<ScheduleEntry<GlucoseRange>>;
+pub type GlucoseRangeTimeline = Vec<ScheduleEntry<GlucoseRange>, VEC_SIZE>;
 
 fn range_average(r: GlucoseRange) -> f64 {
     (r.0 + r.1) / 2.0

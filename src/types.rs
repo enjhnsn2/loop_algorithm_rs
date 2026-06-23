@@ -1,3 +1,6 @@
+use crate::VEC_SIZE;
+use heapless::Vec;
+
 /// Seconds since Unix epoch.
 pub type Timestamp = f64;
 
@@ -50,7 +53,7 @@ pub fn filter_date_range<T>(
     entries: &[ScheduleEntry<T>],
     start: Option<Timestamp>,
     end: Option<Timestamp>,
-) -> Vec<&ScheduleEntry<T>> {
+) -> Vec<&ScheduleEntry<T>, VEC_SIZE> {
     entries
         .iter()
         .filter(|e| {
@@ -74,7 +77,7 @@ pub fn trim_schedule(
     entries: &[ScheduleEntry<f64>],
     start: Option<Timestamp>,
     end: Option<Timestamp>,
-) -> Vec<ScheduleEntry<f64>> {
+) -> Vec<ScheduleEntry<f64>, VEC_SIZE> {
     entries
         .iter()
         .filter_map(|e| {

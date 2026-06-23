@@ -24,3 +24,5 @@ pub use insulin::{
 pub use types::{
     GlucoseChange, GlucoseEffect, GlucoseEffectVelocity, PredictedGlucose, ScheduleEntry, Timestamp,
 };
+
+pub const VEC_SIZE: usize = 4096;

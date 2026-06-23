@@ -1,4 +1,6 @@
 use crate::types::{GlucoseChange, GlucoseEffect, Timestamp};
+use crate::VEC_SIZE;
+use heapless::Vec;
 
 const DELTA_MIN: f64 = 5.0;
 
@@ -50,10 +52,10 @@ pub fn standard_rc_effect(
     grouping_interval: f64,
     effect_duration: f64,
     delta: f64,
-) -> (Vec<GlucoseEffect>, Option<f64>) {
+) -> (Vec<GlucoseEffect, VEC_SIZE>, Option<f64>) {
     let current = match discrepancies.last() {
         Some(d) if starting_glucose_start - d.end <= recency_interval => d,
-        _ => return (vec![], None),
+        _ => return (Vec::new(), None),
     };
 
     let discrepancy_value = current.value_mgdl;
@@ -79,29 +81,29 @@ pub fn integral_rc_effect(
     grouping_interval: f64,
     effect_duration: f64,
     delta: f64,
-) -> (Vec<GlucoseEffect>, Option<f64>) {
+) -> (Vec<GlucoseEffect, VEC_SIZE>, Option<f64>) {
     let current = match discrepancies.last() {
         Some(d) if starting_glucose_start - d.end <= recency_interval => d,
-        _ => return (vec![], None),
+        _ => return (Vec::new(), None),
     };
 
     let current_value = current.value_mgdl;
 
     // Find contiguous same-sign recent discrepancies
     let cutoff = starting_glucose_start - RETROSPECTION_INTERVAL;
-    let past: Vec<&GlucoseChange> = discrepancies
+    let past: Vec<&GlucoseChange, VEC_SIZE> = discrepancies
         .iter()
         .filter(|d| d.start >= cutoff && d.end <= starting_glucose_start)
         .collect();
 
     let current_sign = signum(current_value);
-    let mut recent_values: Vec<f64> = Vec::new();
+    let mut recent_values: Vec<f64, VEC_SIZE> = Vec::new();
     let mut next = current;
     for d in past.iter().rev() {
         let v = d.value_mgdl;
         if signum(v) == current_sign && next.end - d.end <= recency_interval && libm::fabs(v) >= 0.1
         {
-            recent_values.push(v);
+            let _ = recent_values.push(v);
             next = d;
         } else {
             break;
@@ -161,7 +163,7 @@ pub fn decay_effect(
     velocity_mgdl_per_sec: f64,
     duration: f64,
     delta: f64,
-) -> Vec<GlucoseEffect> {
+) -> Vec<GlucoseEffect, VEC_SIZE> {
     use crate::types::simulation_date_range;
 
     let starts = [start_time];
@@ -169,7 +171,7 @@ pub fn decay_effect(
     let Some((sim_start, sim_end)) =
         simulation_date_range(&starts, &ends, None, None, duration, delta)
     else {
-        return vec![];
+        return Vec::new();
     };
 
     // intercept = velocity at t=0 (start_time)
@@ -178,15 +180,16 @@ pub fn decay_effect(
     // slope decays to 0 at t = duration
     let slope = -intercept / (duration - delta);
 
-    let mut out = vec![GlucoseEffect {
+    let mut out: Vec<GlucoseEffect, VEC_SIZE> = Vec::new();
+    let _ = out.push(GlucoseEffect {
         start: sim_start,
         value_mgdl: start_value_mgdl,
-    }];
+    });
     let mut last_val = start_value_mgdl;
     let mut t = decay_start;
     while t < sim_end {
         let next_val = last_val + (intercept + slope * (t - decay_start)) * delta;
-        out.push(GlucoseEffect {
+        let _ = out.push(GlucoseEffect {
             start: t,
             value_mgdl: next_val,
         });

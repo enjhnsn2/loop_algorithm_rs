@@ -24,6 +24,7 @@ use crate::{
         ceil_to, closest_prior, GlucoseChange, GlucoseEffect, GlucoseEffectVelocity,
         PredictedGlucose, ScheduleEntry, Timestamp,
     },
+    VEC_SIZE,
 };
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -70,15 +71,15 @@ impl Default for AlgorithmEffectsOptions {
 /// All inputs required by the Loop dosing algorithm.
 pub struct AlgorithmInput {
     pub prediction_start: Timestamp,
-    pub glucose_history: Vec<GlucoseSample>,
-    pub doses: Vec<InsulinDose>,
-    pub carb_entries: Vec<CarbEntry>,
+    pub glucose_history: Vec<GlucoseSample, VEC_SIZE>,
+    pub doses: Vec<InsulinDose, VEC_SIZE>,
+    pub carb_entries: Vec<CarbEntry, VEC_SIZE>,
     /// IU/hr at each time segment.
-    pub basal_schedule: Vec<ScheduleEntry<f64>>,
+    pub basal_schedule: Vec<ScheduleEntry<f64>, VEC_SIZE>,
     /// mg/dL per IU.
-    pub sensitivity_schedule: Vec<ScheduleEntry<f64>>,
+    pub sensitivity_schedule: Vec<ScheduleEntry<f64>, VEC_SIZE>,
     /// Grams per IU.
-    pub carb_ratio_schedule: Vec<ScheduleEntry<f64>>,
+    pub carb_ratio_schedule: Vec<ScheduleEntry<f64>, VEC_SIZE>,
     /// (min, max) mg/dL target range.
     pub target: GlucoseRangeTimeline,
     /// None → use the lower bound of `target`.
@@ -103,12 +104,12 @@ pub struct AlgorithmInput {
 impl AlgorithmInput {
     pub fn new(
         prediction_start: Timestamp,
-        glucose_history: Vec<GlucoseSample>,
-        doses: Vec<InsulinDose>,
-        carb_entries: Vec<CarbEntry>,
-        basal_schedule: Vec<ScheduleEntry<f64>>,
-        sensitivity_schedule: Vec<ScheduleEntry<f64>>,
-        carb_ratio_schedule: Vec<ScheduleEntry<f64>>,
+        glucose_history: Vec<GlucoseSample, VEC_SIZE>,
+        doses: Vec<InsulinDose, VEC_SIZE>,
+        carb_entries: Vec<CarbEntry, VEC_SIZE>,
+        basal_schedule: Vec<ScheduleEntry<f64>, VEC_SIZE>,
+        sensitivity_schedule: Vec<ScheduleEntry<f64>, VEC_SIZE>,
+        carb_ratio_schedule: Vec<ScheduleEntry<f64>, VEC_SIZE>,
         target: GlucoseRangeTimeline,
         suspend_threshold: Option<f64>,
         max_bolus: f64,
@@ -143,29 +144,29 @@ impl AlgorithmInput {
 
 /// Intermediate algorithm effects (for diagnostics / UI).
 pub struct AlgorithmEffects {
-    pub insulin: Vec<GlucoseEffect>,
-    pub carbs: Vec<GlucoseEffect>,
-    pub carb_status: Vec<CarbStatus>,
-    pub retrospective_correction: Vec<GlucoseEffect>,
-    pub momentum: Vec<GlucoseEffect>,
-    pub insulin_counteraction: Vec<GlucoseEffectVelocity>,
-    pub retrospective_glucose_discrepancies: Vec<GlucoseChange>,
+    pub insulin: Vec<GlucoseEffect, VEC_SIZE>,
+    pub carbs: Vec<GlucoseEffect, VEC_SIZE>,
+    pub carb_status: Vec<CarbStatus, VEC_SIZE>,
+    pub retrospective_correction: Vec<GlucoseEffect, VEC_SIZE>,
+    pub momentum: Vec<GlucoseEffect, VEC_SIZE>,
+    pub insulin_counteraction: Vec<GlucoseEffectVelocity, VEC_SIZE>,
+    pub retrospective_glucose_discrepancies: Vec<GlucoseChange, VEC_SIZE>,
     pub total_retrospective_correction_mgdl: Option<f64>,
 }
 
 pub struct LoopPrediction {
-    pub glucose: Vec<PredictedGlucose>,
+    pub glucose: Vec<PredictedGlucose, VEC_SIZE>,
     pub effects: AlgorithmEffects,
-    pub doses_relative_to_basal: Vec<BasalRelativeDose>,
+    pub doses_relative_to_basal: Vec<BasalRelativeDose, VEC_SIZE>,
     pub active_insulin: Option<f64>,
     pub active_carbs: Option<f64>,
 }
 
 pub struct AlgorithmOutput {
     pub recommendation: Result<DoseRecommendation, AlgorithmError>,
-    pub predicted_glucose: Vec<PredictedGlucose>,
+    pub predicted_glucose: Vec<PredictedGlucose, VEC_SIZE>,
     pub effects: AlgorithmEffects,
-    pub doses_relative_to_basal: Vec<BasalRelativeDose>,
+    pub doses_relative_to_basal: Vec<BasalRelativeDose, VEC_SIZE>,
     pub active_insulin: Option<f64>,
     pub active_carbs: Option<f64>,
 }
@@ -215,7 +216,7 @@ pub fn predict_glucose(
     starting_mgdl: f64,
     momentum: &[GlucoseEffect],
     effects: &[&[GlucoseEffect]],
-) -> Vec<PredictedGlucose> {
+) -> Vec<PredictedGlucose, VEC_SIZE> {
     // Accumulate deltas at each timestamp
     let mut effect_deltas: BTreeMap<OrdF64, f64> = BTreeMap::new();
 
@@ -258,15 +259,16 @@ pub fn predict_glucose(
     }
 
     // Accumulate deltas into predictions
-    let mut out = vec![PredictedGlucose {
+    let mut out: Vec<PredictedGlucose, VEC_SIZE> = Vec::new();
+    let _ = out.push(PredictedGlucose {
         start: starting_time,
         value_mgdl: starting_mgdl,
-    }];
+    });
     let mut running = starting_mgdl;
     for (OrdF64(t), delta) in &effect_deltas {
         if *t > starting_time {
             running += delta;
-            out.push(PredictedGlucose {
+            let _ = out.push(PredictedGlucose {
                 start: *t,
                 value_mgdl: running,
             });
@@ -296,16 +298,16 @@ pub fn generate_prediction(
     carb_model: CarbAbsorptionModel,
     gradual_threshold: f64,
 ) -> LoopPrediction {
-    let mut insulin_effects: Vec<GlucoseEffect> = vec![];
-    let carb_effects: Vec<GlucoseEffect>;
-    let mut rc_effects: Vec<GlucoseEffect> = vec![];
-    let mut momentum_effects: Vec<GlucoseEffect> = vec![];
-    let mut ice: Vec<GlucoseEffectVelocity> = vec![];
-    let discrepancies_summed: Vec<GlucoseChange>;
+    let mut insulin_effects: Vec<GlucoseEffect, VEC_SIZE> = Vec::new();
+    let carb_effects: Vec<GlucoseEffect, VEC_SIZE>;
+    let mut rc_effects: Vec<GlucoseEffect, VEC_SIZE> = Vec::new();
+    let mut momentum_effects: Vec<GlucoseEffect, VEC_SIZE> = Vec::new();
+    let mut ice: Vec<GlucoseEffectVelocity, VEC_SIZE> = Vec::new();
+    let discrepancies_summed: Vec<GlucoseChange, VEC_SIZE>;
     let mut total_rc: Option<f64> = None;
     let active_insulin: Option<f64>;
     let active_carbs: Option<f64>;
-    let mut doses_relative: Vec<BasalRelativeDose> = vec![];
+    let mut doses_relative: Vec<BasalRelativeDose, VEC_SIZE> = Vec::new();
 
     // ── Insulin effects ───────────────────────────────────────────────────────
     let dose_start = doses.first().map(|d| d.start).unwrap_or(start);
@@ -383,7 +385,7 @@ pub fn generate_prediction(
         combined_sums(&raw_discrepancies, RETROSPECTIVE_GROUPING_INTERVAL * 1.01);
 
     let latest = glucose_history.last();
-    let mut prediction: Vec<PredictedGlucose> = vec![];
+    let mut prediction: Vec<PredictedGlucose, VEC_SIZE> = Vec::new();
 
     if let Some(latest_glucose) = latest {
         let (rc, total) = match rc_mode {
@@ -409,22 +411,22 @@ pub fn generate_prediction(
         rc_effects = rc;
         total_rc = total;
 
-        let mut combined: Vec<&[GlucoseEffect]> = vec![];
+        let mut combined: Vec<&[GlucoseEffect], VEC_SIZE> = Vec::new();
 
         if options.carbs {
-            combined.push(&carb_effects);
+            let _ = combined.push(&carb_effects);
         }
         if options.insulin {
-            combined.push(&insulin_effects);
+            let _ = combined.push(&insulin_effects);
         }
 
         let use_rc = if options.retrospection {
             let rc_window_start = start - RETROSPECTIVE_GROUPING_INTERVAL;
-            let rc_data: Vec<&GlucoseSample> = glucose_history
+            let rc_data: Vec<&GlucoseSample, VEC_SIZE> = glucose_history
                 .iter()
                 .filter(|s| s.start >= rc_window_start && s.start <= start)
                 .collect();
-            let rc_samples: Vec<GlucoseSample> = rc_data.into_iter().cloned().collect();
+            let rc_samples: Vec<GlucoseSample, VEC_SIZE> = rc_data.into_iter().cloned().collect();
             let smooth = has_gradual_transitions(&rc_samples, gradual_threshold);
             let positive_ok = include_positive_velocity_and_rc
                 || rc_effects
@@ -437,14 +439,14 @@ pub fn generate_prediction(
             false
         };
         if use_rc {
-            combined.push(&rc_effects);
+            let _ = combined.push(&rc_effects);
         }
 
         // Momentum
         let use_momentum;
         if options.momentum {
             let mom_window_start = start - MOMENTUM_DATA_INTERVAL;
-            let mom_data: Vec<GlucoseSample> = glucose_history
+            let mom_data: Vec<GlucoseSample, VEC_SIZE> = glucose_history
                 .iter()
                 .filter(|s| s.start >= mom_window_start && s.start <= start)
                 .cloned()
@@ -469,7 +471,7 @@ pub fn generate_prediction(
         let final_date = start + DEFAULT_INSULIN_ACTIVITY_DURATION;
         if let Some(last) = prediction.last() {
             if last.start < final_date {
-                prediction.push(PredictedGlucose {
+                let _ = prediction.push(PredictedGlucose {
                     start: final_date,
                     value_mgdl: last.value_mgdl,
                 });
@@ -499,19 +501,19 @@ pub fn generate_prediction(
 
 pub fn run(input: &AlgorithmInput) -> AlgorithmOutput {
     let empty_effects = AlgorithmEffects {
-        insulin: vec![],
-        carbs: vec![],
-        carb_status: vec![],
-        retrospective_correction: vec![],
-        momentum: vec![],
-        insulin_counteraction: vec![],
-        retrospective_glucose_discrepancies: vec![],
+        insulin: Vec::new(),
+        carbs: Vec::new(),
+        carb_status: Vec::new(),
+        retrospective_correction: Vec::new(),
+        momentum: Vec::new(),
+        insulin_counteraction: Vec::new(),
+        retrospective_glucose_discrepancies: Vec::new(),
         total_retrospective_correction_mgdl: None,
     };
     let mut prediction = LoopPrediction {
-        glucose: vec![],
+        glucose: Vec::new(),
         effects: empty_effects,
-        doses_relative_to_basal: vec![],
+        doses_relative_to_basal: Vec::new(),
         active_insulin: None,
         active_carbs: None,
     };
@@ -604,8 +606,8 @@ pub fn run(input: &AlgorithmInput) -> AlgorithmOutput {
         );
 
         // ── ISF for dosing recommendation ─────────────────────────────────────
-        let dosing_isf: Vec<ScheduleEntry<f64>> = if input.use_mid_absorption_isf {
-            input.sensitivity_schedule.to_vec()
+        let dosing_isf: Vec<ScheduleEntry<f64>, VEC_SIZE> = if input.use_mid_absorption_isf {
+            input.sensitivity_schedule.clone()
         } else {
             // Single ISF entry at prediction_start covering the forecast window
             let isf_at_start = input
@@ -621,14 +623,16 @@ pub fn run(input: &AlgorithmInput) -> AlgorithmOutput {
                     .map(|e| e.start)
                     .unwrap_or(forecast_end),
             );
-            vec![ScheduleEntry {
+            let mut isf: Vec<ScheduleEntry<f64>, VEC_SIZE> = Vec::new();
+            let _ = isf.push(ScheduleEntry {
                 start: isf_at_start.start,
                 end: sens_end,
                 value: isf_at_start.value,
-            }]
+            });
+            isf
         };
 
-        let predicted_pairs: Vec<(Timestamp, f64)> = prediction
+        let predicted_pairs: Vec<(Timestamp, f64), VEC_SIZE> = prediction
             .glucose
             .iter()
             .map(|p| (p.start, p.value_mgdl))

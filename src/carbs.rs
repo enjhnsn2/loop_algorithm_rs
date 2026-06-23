@@ -1,6 +1,8 @@
 use crate::types::{
     closest_prior, floor_to, GlucoseEffect, GlucoseEffectVelocity, ScheduleEntry, Timestamp,
 };
+use crate::VEC_SIZE;
+use heapless::Vec;
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -174,7 +176,7 @@ pub struct CarbStatus {
     pub entry: CarbEntry,
     pub absorption: Option<AbsorbedCarbValue>,
     /// Observed absorption timeline; `None` if below modeled minimum.
-    pub observed_timeline: Option<Vec<CarbTimelineValue>>,
+    pub observed_timeline: Option<Vec<CarbTimelineValue, VEC_SIZE>>,
 }
 
 impl CarbStatus {
@@ -289,7 +291,7 @@ impl CarbStatus {
                 .min(abs.total_g)
         } else {
             // Sum observed values up to `date`
-            let mut before: Vec<&CarbTimelineValue> = timeline
+            let mut before: Vec<&CarbTimelineValue, VEC_SIZE> = timeline
                 .iter()
                 .filter(|v| v.start + delta <= date)
                 .collect();
@@ -325,7 +327,7 @@ struct CarbStatusBuilder {
     adaptive_standby_fraction: f64,
     // mutable state
     observed_effect: f64,
-    observed_timeline: Vec<CarbTimelineValue>,
+    observed_timeline: Vec<CarbTimelineValue, VEC_SIZE>,
     observed_completion_date: Option<Timestamp>,
 }
 
@@ -432,7 +434,7 @@ impl CarbStatusBuilder {
         }
         self.observed_effect += effect;
         if self.observed_completion_date.is_none() {
-            self.observed_timeline.push(CarbTimelineValue {
+            let _ = self.observed_timeline.push(CarbTimelineValue {
                 start,
                 end,
                 value_g: effect / self.csf,
@@ -503,14 +505,14 @@ pub fn map_carb_entries(
     model: CarbAbsorptionModel,
     adaptive: bool,
     adaptive_standby_fraction: f64,
-) -> Vec<CarbStatus> {
+) -> Vec<CarbStatus, VEC_SIZE> {
     if entries.is_empty() {
-        return vec![];
+        return Vec::new();
     }
 
     let last_effect_date = effect_velocities.last().map(|v| v.end);
 
-    let mut builders: Vec<CarbStatusBuilder> = entries
+    let mut builders: Vec<CarbStatusBuilder, VEC_SIZE> = entries
         .iter()
         .map(|entry| {
             let cr = closest_prior(carb_ratio_schedule, entry.start)
@@ -544,7 +546,7 @@ pub fn map_carb_entries(
         let mut effect_value = vel.integrated_mgdl().max(0.0);
 
         // Active builder indices (whose window overlaps this velocity)
-        let active_indices: Vec<usize> = builders
+        let active_indices: Vec<usize, VEC_SIZE> = builders
             .iter()
             .enumerate()
             .filter(|(_, b)| vel.start < b.max_end_date && vel.start >= b.entry.start)
@@ -656,13 +658,13 @@ pub fn dynamic_glucose_effects(
     model: CarbAbsorptionModel,
     delay: f64,
     delta: f64,
-) -> Vec<GlucoseEffect> {
+) -> Vec<GlucoseEffect, VEC_SIZE> {
     let Some((start, end)) = carb_simulation_date_range(statuses, from, to, delay, delta) else {
-        return vec![];
+        return Vec::new();
     };
 
     let mut t = start;
-    let mut out = Vec::new();
+    let mut out: Vec<GlucoseEffect, VEC_SIZE> = Vec::new();
     while t <= end {
         let value: f64 = statuses
             .iter()
@@ -678,7 +680,7 @@ pub fn dynamic_glucose_effects(
                 csf * s.dynamic_absorbed(t, at, delay, delta, model)
             })
             .sum();
-        out.push(GlucoseEffect {
+        let _ = out.push(GlucoseEffect {
             start: t,
             value_mgdl: value,
         });

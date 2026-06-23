@@ -1,4 +1,6 @@
 use crate::types::{simulation_date_range, GlucoseEffect, GlucoseEffectVelocity, Timestamp};
+use crate::VEC_SIZE;
+use heapless::Vec;
 
 // ── Glucose sample ────────────────────────────────────────────────────────────
 
@@ -74,7 +76,7 @@ pub fn linear_momentum_effect(
     samples: &[GlucoseSample],
     duration: f64,
     delta: f64,
-) -> Vec<GlucoseEffect> {
+) -> Vec<GlucoseEffect, VEC_SIZE> {
     if samples.len() <= 2
         || !has_single_provenance(samples)
         || contains_calibrations(samples)
@@ -84,19 +86,19 @@ pub fn linear_momentum_effect(
         )
         || !has_gradual_transitions(samples, 40.0)
     {
-        return vec![];
+        return Vec::new();
     }
 
     let first = samples.first().unwrap();
     let last = samples.last().unwrap();
 
-    let points: Vec<(f64, f64)> = samples
+    let points: Vec<(f64, f64), VEC_SIZE> = samples
         .iter()
         .map(|s| (s.start - first.start, s.value_mgdl))
         .collect();
     let (slope, _) = linear_regression(&points);
     if !slope.is_finite() {
-        return vec![];
+        return Vec::new();
     }
     let limited_slope = slope.min(VELOCITY_MAX_MGDL_PER_SEC);
 
@@ -104,14 +106,14 @@ pub fn linear_momentum_effect(
     let ends = [last.start];
     let Some((start, end)) = simulation_date_range(&starts, &ends, None, None, duration, delta)
     else {
-        return vec![];
+        return Vec::new();
     };
 
     let mut t = start;
-    let mut out = Vec::new();
+    let mut out: Vec<GlucoseEffect, VEC_SIZE> = Vec::new();
     while t <= end {
         let value = (t - last.start).max(0.0) * limited_slope;
-        out.push(GlucoseEffect {
+        let _ = out.push(GlucoseEffect {
             start: t,
             value_mgdl: value,
         });
@@ -129,18 +131,18 @@ pub fn linear_momentum_effect(
 pub fn counteraction_effects(
     samples: &[GlucoseSample],
     insulin_effects: &[GlucoseEffect],
-) -> Vec<GlucoseEffectVelocity> {
+) -> Vec<GlucoseEffectVelocity, VEC_SIZE> {
     if samples.is_empty() || insulin_effects.is_empty() {
-        return vec![];
+        return Vec::new();
     }
 
     let first_effect_start = insulin_effects[0].start;
     let start_idx = match samples.iter().position(|s| s.start >= first_effect_start) {
         Some(i) => i,
-        None => return vec![],
+        None => return Vec::new(),
     };
 
-    let mut out = Vec::new();
+    let mut out: Vec<GlucoseEffectVelocity, VEC_SIZE> = Vec::new();
     let mut effect_idx = 0usize;
     let mut sg_start = start_idx;
     let mut sg_end = start_idx + 1;
@@ -190,7 +192,7 @@ pub fn counteraction_effects(
         let discrepancy = glucose_change - effect_change;
         let velocity = discrepancy / dt;
 
-        out.push(GlucoseEffectVelocity {
+        let _ = out.push(GlucoseEffectVelocity {
             start: gs.start,
             end: ge.start,
             value_mgdl_per_sec: velocity,
@@ -211,9 +213,9 @@ pub fn subtract_effects(
     velocities: &[GlucoseEffectVelocity],
     carb_effects: &[GlucoseEffect],
     effect_interval: f64,
-) -> Vec<GlucoseEffect> {
+) -> Vec<GlucoseEffect, VEC_SIZE> {
     if velocities.is_empty() {
-        return vec![];
+        return Vec::new();
     }
     // When no carb effects, discrepancy equals the ICE directly (nothing to subtract)
     if carb_effects.is_empty() {
@@ -230,20 +232,20 @@ pub fn subtract_effects(
     let first_vel_end = velocities[0].end;
     let carb_start_idx = match carb_effects.iter().position(|e| e.start >= first_vel_end) {
         Some(i) => i,
-        None => return vec![],
+        None => return Vec::new(),
     };
 
     // Trim velocities to start at or after carb_effects[0].start
     let first_carb_start = carb_effects[carb_start_idx].start;
     let vel_start_idx = match velocities.iter().position(|v| v.end >= first_carb_start) {
         Some(i) => i,
-        None => return vec![],
+        None => return Vec::new(),
     };
 
     let carb_slice = &carb_effects[carb_start_idx..];
     let vel_slice = &velocities[vel_start_idx..];
 
-    let mut out = Vec::new();
+    let mut out: Vec<GlucoseEffect, VEC_SIZE> = Vec::new();
     let mut prev_carb_val = carb_slice[0].value_mgdl;
     let mut vel_idx = 0usize;
 
@@ -262,7 +264,7 @@ pub fn subtract_effects(
         vel_idx += 1;
 
         let vel_contribution = vel.value_mgdl_per_sec * effect_interval;
-        out.push(GlucoseEffect {
+        let _ = out.push(GlucoseEffect {
             start: vel.end,
             value_mgdl: vel_contribution - carb_change,
         });
@@ -270,7 +272,7 @@ pub fn subtract_effects(
 
     // Remaining velocities with no carb counterpart (carb effect = 0)
     for vel in &vel_slice[vel_idx..] {
-        out.push(GlucoseEffect {
+        let _ = out.push(GlucoseEffect {
             start: vel.end,
             value_mgdl: vel.value_mgdl_per_sec * effect_interval,
         });
@@ -285,9 +287,12 @@ pub fn subtract_effects(
 ///
 /// Input must be sorted chronologically.  This is used to compute the retrospective glucose
 /// discrepancy over the past 30 minutes at each point in time.
-pub fn combined_sums(effects: &[GlucoseEffect], duration: f64) -> Vec<crate::types::GlucoseChange> {
+pub fn combined_sums(
+    effects: &[GlucoseEffect],
+    duration: f64,
+) -> Vec<crate::types::GlucoseChange, VEC_SIZE> {
     use crate::types::GlucoseChange;
-    let mut sums: Vec<GlucoseChange> = Vec::with_capacity(effects.len());
+    let mut sums: Vec<GlucoseChange, VEC_SIZE> = Vec::new();
     let mut last_valid = 0usize;
 
     for effect in effects.iter().rev() {
@@ -302,7 +307,7 @@ pub fn combined_sums(effects: &[GlucoseEffect], duration: f64) -> Vec<crate::typ
             }
             i += 1;
         }
-        sums.push(GlucoseChange {
+        let _ = sums.push(GlucoseChange {
             start: effect.start,
             end: effect.start, // GlucoseEffect.endDate == startDate
             value_mgdl: effect.value_mgdl,
