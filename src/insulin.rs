@@ -299,8 +299,7 @@ pub fn annotated_doses(
         for dose in doses {
             if dose.delivery_type == InsulinDeliveryType::Basal {
                 let items = filter_date_range(basal_history, Some(dose.start), Some(dose.end));
-                let owned: Vec<ScheduleEntry<f64>, VEC_SIZE> =
-                    items.into_iter().cloned().collect();
+                let owned: Vec<ScheduleEntry<f64>, VEC_SIZE> = items.into_iter().cloned().collect();
                 out.extend(annotate_basal_dose(dose, &owned));
             } else {
                 let _ = out.push(BasalRelativeDose {
