@@ -1,3 +1,4 @@
+#![flux::no_panic]
 use crate::types::{GlucoseChange, GlucoseEffect, Timestamp};
 
 const DELTA_MIN: f64 = 5.0;
@@ -96,6 +97,7 @@ pub fn integral_rc_effect(
             break;
         }
     }
+
     recent_values.reverse();
 
     // PID calculation
@@ -107,8 +109,10 @@ pub fn integral_rc_effect(
     }
     integral_duration_min = integral_duration_min.min(MAX_CORRECTION_DURATION / 60.0);
 
-    let differential = if recent_values.len() > 1 {
-        let prev = recent_values[recent_values.len() - 2];
+    let len = recent_values.len();
+    let differential = if len > 1 {
+        flux_rs::assert(len > 1);
+        let prev = recent_values[len - 2];
         current_value - prev
     } else {
         0.0

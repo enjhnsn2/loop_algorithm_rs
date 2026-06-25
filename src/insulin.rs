@@ -1,3 +1,4 @@
+#![flux::no_panic]
 use crate::types::{
     closest_prior, filter_date_range, floor_to, simulation_date_range, GlucoseEffect, InsulinValue,
     ScheduleEntry, Timestamp,
@@ -424,7 +425,7 @@ pub fn iob_at(doses: &[BasalRelativeDose], at: Timestamp) -> f64 {
 }
 
 // ── Glucose-effect timeline (fixed ISF per dose) ──────────────────────────────
-
+#[flux_rs::trusted(reason = "closest_prior")]
 pub fn glucose_effects(
     doses: &[BasalRelativeDose],
     isf_schedule: &[ScheduleEntry<f64>], // mg/dL/IU

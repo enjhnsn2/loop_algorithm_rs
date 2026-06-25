@@ -1,3 +1,4 @@
+#![flux::no_panic]
 use crate::types::{
     closest_prior, floor_to, GlucoseEffect, GlucoseEffectVelocity, ScheduleEntry, Timestamp,
 };
@@ -189,6 +190,7 @@ impl CarbStatus {
             })
     }
 
+    #[flux_rs::trusted(reason = "ICE - Impossible case reached")]
     /// Dynamic carbs on board at `date`.
     pub fn dynamic_cob(
         &self,
@@ -490,6 +492,7 @@ impl CarbStatusBuilder {
 // ── Public API: carb entry → CarbStatus ───────────────────────────────────────
 
 /// Map carb entries to `CarbStatus` using observed counteraction effects.
+#[flux_rs::trusted(reason = "ICE - impossible case reached")]
 pub fn map_carb_entries(
     entries: &[CarbEntry],
     effect_velocities: &[GlucoseEffectVelocity],
@@ -646,6 +649,7 @@ pub fn dynamic_cob_at(statuses: &[CarbStatus], at: Timestamp, model: CarbAbsorpt
 }
 
 /// Dynamic glucose effects from carbs (cumulative mg/dL timeline).
+#[flux_rs::trusted(reason = "closest_prior")]
 pub fn dynamic_glucose_effects(
     statuses: &[CarbStatus],
     from: Option<Timestamp>,
@@ -656,9 +660,7 @@ pub fn dynamic_glucose_effects(
     delay: f64,
     delta: f64,
 ) -> Vec<GlucoseEffect> {
-    let Some((start, end)) =
-        carb_simulation_date_range(statuses, from, to, delay, delta)
-    else {
+    let Some((start, end)) = carb_simulation_date_range(statuses, from, to, delay, delta) else {
         return vec![];
     };
 

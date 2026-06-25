@@ -1,6 +1,11 @@
+#![flux::opts(scrape_quals = true)]
+#![feature(allocator_api)]
+extern crate flux_core;
+
 pub mod algorithm;
 pub mod carbs;
 pub mod dose;
+mod flux_specs;
 pub mod glucose;
 pub mod insulin;
 pub mod retrospective;

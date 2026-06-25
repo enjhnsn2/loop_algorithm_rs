@@ -1,3 +1,5 @@
+#![flux::no_panic]
+
 use crate::types::{closest_prior, ScheduleEntry, Timestamp};
 
 // ── Recommendation types ──────────────────────────────────────────────────────
@@ -232,6 +234,7 @@ use crate::insulin::ExponentialInsulinModel;
 /// Determine the minimum insulin correction needed to bring predicted glucose into range.
 ///
 /// `predicted` must extend at least `model.effect_duration()` beyond `delivery_date`.
+#[flux_rs::trusted(reason = "ICE - Impossible case reached")]
 pub fn insulin_correction(
     predicted: &[(Timestamp, f64)], // (time, mg/dL)
     delivery_date: Timestamp,

@@ -1,3 +1,4 @@
+#![flux::no_panic]
 use std::collections::BTreeMap;
 
 use crate::{
@@ -189,6 +190,7 @@ impl std::error::Error for AlgorithmError {}
 struct OrdF64(f64);
 impl Eq for OrdF64 {}
 impl Ord for OrdF64 {
+    #[flux_rs::trusted(reason = "FP constraint")]
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         // SAFETY: values are always finite (floor/ceil of finite timestamps).
         self.0.partial_cmp(&other.0).unwrap()
@@ -200,6 +202,7 @@ impl Ord for OrdF64 {
 /// `starting_glucose` is the most recent real glucose reading.
 /// `effects` are cumulative (each entry's value represents the total up to that time).
 /// `momentum` is cumulative and blended linearly into the combined effect.
+#[flux::spec(fn(Timestamp, f64, &[GlucoseEffect][@n], &[&[GlucoseEffect]]) -> Vec<PredictedGlucose> requires n >= 2)]
 pub fn predict_glucose(
     starting_time: Timestamp,
     starting_mgdl: f64,
@@ -271,6 +274,7 @@ pub fn predict_glucose(
 ///
 /// Returns a partial result even if some effects cannot be computed; always fills in as
 /// much as possible.
+#[flux_rs::trusted(reason = "ICE - Impossible case reached")]
 pub fn generate_prediction(
     start: Timestamp,
     glucose_history: &[GlucoseSample],
@@ -486,7 +490,7 @@ pub fn generate_prediction(
 }
 
 // ── run: full algorithm with validation and dosing ────────────────────────────
-
+#[flux_rs::trusted(reason = "ICE - Impossible case reached")]
 pub fn run(input: &AlgorithmInput) -> AlgorithmOutput {
     let empty_effects = AlgorithmEffects {
         insulin: vec![],

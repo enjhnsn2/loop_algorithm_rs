@@ -1,3 +1,4 @@
+#![flux::no_panic]
 /// Seconds since Unix epoch.
 pub type Timestamp = f64;
 
@@ -38,6 +39,7 @@ impl<T> ScheduleEntry<T> {
 }
 
 /// The entry whose `start <= date`, or `None`.  Assumes `entries` is sorted by start.
+#[flux_rs::trusted(reason = "MightPanic(UnresolvedCall)")]
 pub fn closest_prior<T>(
     entries: &[ScheduleEntry<T>],
     date: Timestamp,

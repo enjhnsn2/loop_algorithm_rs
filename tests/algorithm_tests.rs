@@ -1,9 +1,11 @@
 use loop_algorithm::{
-    algorithm::{run, AlgorithmInput, AlgorithmError},
+    algorithm::{run, AlgorithmError, AlgorithmInput},
     carbs::CarbEntry,
     dose::DoseRecommendationType,
     glucose::GlucoseSample,
-    insulin::{InsulinDeliveryType, InsulinDose, ModelPreset, DEFAULT_INSULIN_ACTIVITY_DURATION, DELTA},
+    insulin::{
+        InsulinDeliveryType, InsulinDose, ModelPreset, DEFAULT_INSULIN_ACTIVITY_DURATION, DELTA,
+    },
     types::{ceil_to, ScheduleEntry},
 };
 
@@ -19,10 +21,30 @@ fn mock_input(now: f64) -> AlgorithmInput {
     AlgorithmInput::new(
         now,
         vec![
-            GlucoseSample { start: now - 19.0 * 60.0, value_mgdl: 100.0, provenance: 0, is_display_only: false },
-            GlucoseSample { start: now - 14.0 * 60.0, value_mgdl: 120.0, provenance: 0, is_display_only: false },
-            GlucoseSample { start: now - 9.0 * 60.0,  value_mgdl: 140.0, provenance: 0, is_display_only: false },
-            GlucoseSample { start: now - 4.0 * 60.0,  value_mgdl: 160.0, provenance: 0, is_display_only: false },
+            GlucoseSample {
+                start: now - 19.0 * 60.0,
+                value_mgdl: 100.0,
+                provenance: 0,
+                is_display_only: false,
+            },
+            GlucoseSample {
+                start: now - 14.0 * 60.0,
+                value_mgdl: 120.0,
+                provenance: 0,
+                is_display_only: false,
+            },
+            GlucoseSample {
+                start: now - 9.0 * 60.0,
+                value_mgdl: 140.0,
+                provenance: 0,
+                is_display_only: false,
+            },
+            GlucoseSample {
+                start: now - 4.0 * 60.0,
+                value_mgdl: 160.0,
+                provenance: 0,
+                is_display_only: false,
+            },
         ],
         vec![],
         vec![],
@@ -65,7 +87,11 @@ fn test_algorithm_with_long_absorbing_carbs() {
 
     assert!((output.active_carbs.unwrap_or(0.0) - 50.0).abs() < 1.0);
     let manual = output.recommendation.unwrap().manual.unwrap();
-    assert!((manual.amount_iu - 5.83).abs() < 0.01, "Expected 5.83, got {}", manual.amount_iu);
+    assert!(
+        (manual.amount_iu - 5.83).abs() < 0.01,
+        "Expected 5.83, got {}",
+        manual.amount_iu
+    );
 }
 
 // ── testAlgorithmShouldBeDateIndependent ─────────────────────────────────────
@@ -97,25 +123,80 @@ fn test_algorithm_should_be_date_independent() {
         "activeCarbs should be approximately equal"
     );
     assert!(
-        (output_a.active_insulin.unwrap_or(0.0) - output_b.active_insulin.unwrap_or(0.0)).abs() < 0.01,
+        (output_a.active_insulin.unwrap_or(0.0) - output_b.active_insulin.unwrap_or(0.0)).abs()
+            < 0.01,
         "activeInsulin should be approximately equal"
     );
 
     // 10g carbs at ISF 55, carb ratio 10 → total carb glucose effect = 55 mg/dL
-    let carbs_last_a = output_a.effects.carbs.last().map(|e| e.value_mgdl).unwrap_or(0.0);
-    let carbs_last_b = output_b.effects.carbs.last().map(|e| e.value_mgdl).unwrap_or(0.0);
-    assert!((carbs_last_a - 55.0).abs() < 1.0, "carbs effect last should be ~55, got {}", carbs_last_a);
-    assert!((carbs_last_b - 55.0).abs() < 1.0, "carbs effect last should be ~55, got {}", carbs_last_b);
+    let carbs_last_a = output_a
+        .effects
+        .carbs
+        .last()
+        .map(|e| e.value_mgdl)
+        .unwrap_or(0.0);
+    let carbs_last_b = output_b
+        .effects
+        .carbs
+        .last()
+        .map(|e| e.value_mgdl)
+        .unwrap_or(0.0);
+    assert!(
+        (carbs_last_a - 55.0).abs() < 1.0,
+        "carbs effect last should be ~55, got {}",
+        carbs_last_a
+    );
+    assert!(
+        (carbs_last_b - 55.0).abs() < 1.0,
+        "carbs effect last should be ~55, got {}",
+        carbs_last_b
+    );
 
-    let insulin_last_a = output_a.effects.insulin.last().map(|e| e.value_mgdl).unwrap_or(0.0);
-    let insulin_last_b = output_b.effects.insulin.last().map(|e| e.value_mgdl).unwrap_or(0.0);
-    assert!((insulin_last_a - 0.0).abs() < 0.5, "insulin effect last should be ~0, got {}", insulin_last_a);
-    assert!((insulin_last_b - 0.0).abs() < 0.5, "insulin effect last should be ~0, got {}", insulin_last_b);
+    let insulin_last_a = output_a
+        .effects
+        .insulin
+        .last()
+        .map(|e| e.value_mgdl)
+        .unwrap_or(0.0);
+    let insulin_last_b = output_b
+        .effects
+        .insulin
+        .last()
+        .map(|e| e.value_mgdl)
+        .unwrap_or(0.0);
+    assert!(
+        (insulin_last_a - 0.0).abs() < 0.5,
+        "insulin effect last should be ~0, got {}",
+        insulin_last_a
+    );
+    assert!(
+        (insulin_last_b - 0.0).abs() < 0.5,
+        "insulin effect last should be ~0, got {}",
+        insulin_last_b
+    );
 
-    let rc_last_a = output_a.effects.retrospective_correction.last().map(|e| e.value_mgdl).unwrap_or(0.0);
-    let rc_last_b = output_b.effects.retrospective_correction.last().map(|e| e.value_mgdl).unwrap_or(0.0);
-    assert!((rc_last_a - 165.0).abs() < 5.0, "RC last should be ~165, got {}", rc_last_a);
-    assert!((rc_last_b - 165.0).abs() < 5.0, "RC last should be ~165, got {}", rc_last_b);
+    let rc_last_a = output_a
+        .effects
+        .retrospective_correction
+        .last()
+        .map(|e| e.value_mgdl)
+        .unwrap_or(0.0);
+    let rc_last_b = output_b
+        .effects
+        .retrospective_correction
+        .last()
+        .map(|e| e.value_mgdl)
+        .unwrap_or(0.0);
+    assert!(
+        (rc_last_a - 165.0).abs() < 5.0,
+        "RC last should be ~165, got {}",
+        rc_last_a
+    );
+    assert!(
+        (rc_last_b - 165.0).abs() < 5.0,
+        "RC last should be ~165, got {}",
+        rc_last_b
+    );
 }
 
 // ── testSpuriousReadingDisablesRCAndMomentum ─────────────────────────────────
@@ -128,30 +209,75 @@ fn test_spurious_reading_disables_rc_and_momentum() {
     let mut input = mock_input(base + 30.0 * 60.0);
 
     input.glucose_history = vec![
-        GlucoseSample { start: base,                value_mgdl: 100.0, provenance: 0, is_display_only: false },
-        GlucoseSample { start: base + 5.0 * 60.0,  value_mgdl: 115.0, provenance: 0, is_display_only: false },
-        GlucoseSample { start: base + 10.0 * 60.0, value_mgdl: 125.0, provenance: 0, is_display_only: false },
-        GlucoseSample { start: base + 15.0 * 60.0, value_mgdl: 179.0, provenance: 0, is_display_only: false }, // +54 jump
-        GlucoseSample { start: base + 20.0 * 60.0, value_mgdl: 148.0, provenance: 0, is_display_only: false },
-        GlucoseSample { start: base + 25.0 * 60.0, value_mgdl: 158.0, provenance: 0, is_display_only: false },
-        GlucoseSample { start: base + 30.0 * 60.0, value_mgdl: 168.0, provenance: 0, is_display_only: false },
+        GlucoseSample {
+            start: base,
+            value_mgdl: 100.0,
+            provenance: 0,
+            is_display_only: false,
+        },
+        GlucoseSample {
+            start: base + 5.0 * 60.0,
+            value_mgdl: 115.0,
+            provenance: 0,
+            is_display_only: false,
+        },
+        GlucoseSample {
+            start: base + 10.0 * 60.0,
+            value_mgdl: 125.0,
+            provenance: 0,
+            is_display_only: false,
+        },
+        GlucoseSample {
+            start: base + 15.0 * 60.0,
+            value_mgdl: 179.0,
+            provenance: 0,
+            is_display_only: false,
+        }, // +54 jump
+        GlucoseSample {
+            start: base + 20.0 * 60.0,
+            value_mgdl: 148.0,
+            provenance: 0,
+            is_display_only: false,
+        },
+        GlucoseSample {
+            start: base + 25.0 * 60.0,
+            value_mgdl: 158.0,
+            provenance: 0,
+            is_display_only: false,
+        },
+        GlucoseSample {
+            start: base + 30.0 * 60.0,
+            value_mgdl: 168.0,
+            provenance: 0,
+            is_display_only: false,
+        },
     ];
 
     // With spurious reading (>40 threshold), momentum and RC are suppressed → lower forecast
     let output = run(&input);
-    let last_glucose = output.predicted_glucose.last().map(|g| g.value_mgdl).unwrap_or(0.0);
+    let last_glucose = output
+        .predicted_glucose
+        .last()
+        .map(|g| g.value_mgdl)
+        .unwrap_or(0.0);
     assert!(
         (last_glucose - 164.5).abs() < 0.5,
-        "Expected ~164.5 with spurious reading, got {}", last_glucose
+        "Expected ~164.5 with spurious reading, got {}",
+        last_glucose
     );
 
     // With higher threshold (60), spurious reading is treated as gradual → higher forecast
     input.gradual_transition_threshold = 60.0;
     let output2 = run(&input);
-    let last_glucose2 = output2.predicted_glucose.last().map(|g| g.value_mgdl).unwrap_or(0.0);
+    let last_glucose2 = output2
+        .predicted_glucose
+        .last()
+        .map(|g| g.value_mgdl)
+        .unwrap_or(0.0);
     assert!(
         (last_glucose2 - 216.0).abs() < 1.0,
-        "Expected ~216 with threshold=60, got {}", last_glucose2
+        "Expected ~216 with threshold=60, got {}",
+        last_glucose2
     );
 }
 
@@ -182,14 +308,32 @@ fn test_mid_absorption_isf_flag() {
     // Without mid-absorption ISF: uses ISF at delivery time for the whole window
     input.use_mid_absorption_isf = false;
     let output = run(&input);
-    let insulin_last = output.effects.insulin.last().map(|e| e.value_mgdl).unwrap_or(0.0);
-    assert!((insulin_last - (-50.0)).abs() < 0.5, "Expected ~-50, got {}", insulin_last);
+    let insulin_last = output
+        .effects
+        .insulin
+        .last()
+        .map(|e| e.value_mgdl)
+        .unwrap_or(0.0);
+    assert!(
+        (insulin_last - (-50.0)).abs() < 0.5,
+        "Expected ~-50, got {}",
+        insulin_last
+    );
 
     // With mid-absorption ISF: blends ISF across the absorption window
     input.use_mid_absorption_isf = true;
     let output2 = run(&input);
-    let insulin_last2 = output2.effects.insulin.last().map(|e| e.value_mgdl).unwrap_or(0.0);
-    assert!((insulin_last2 - (-83.0)).abs() < 1.0, "Expected ~-83, got {}", insulin_last2);
+    let insulin_last2 = output2
+        .effects
+        .insulin
+        .last()
+        .map(|e| e.value_mgdl)
+        .unwrap_or(0.0);
+    assert!(
+        (insulin_last2 - (-83.0)).abs() < 1.0,
+        "Expected ~-83, got {}",
+        insulin_last2
+    );
 }
 
 // ── testAutoBolusMaxIOBClamping ───────────────────────────────────────────────
@@ -212,17 +356,45 @@ fn test_auto_bolus_max_iob_clamping() {
     input.max_bolus = 8.0;
     let output = run(&input);
     let active_insulin = output.active_insulin.unwrap_or(0.0);
-    assert!((active_insulin - 8.0).abs() < 0.5, "Expected ~8U IOB, got {}", active_insulin);
-    let bolus = output.recommendation.unwrap().automatic.unwrap().bolus_units.unwrap_or(0.0);
-    assert!((bolus - 1.66).abs() < 0.05, "Expected ~1.66U bolus with maxBolus=8, got {}", bolus);
+    assert!(
+        (active_insulin - 8.0).abs() < 0.5,
+        "Expected ~8U IOB, got {}",
+        active_insulin
+    );
+    let bolus = output
+        .recommendation
+        .unwrap()
+        .automatic
+        .unwrap()
+        .bolus_units
+        .unwrap_or(0.0);
+    assert!(
+        (bolus - 1.66).abs() < 0.05,
+        "Expected ~1.66U bolus with maxBolus=8, got {}",
+        bolus
+    );
 
     // maxBolus = 4 → maxActiveInsulin = 8; already at cap, no additional bolus
     input.max_bolus = 4.0;
     let output2 = run(&input);
     let active_insulin2 = output2.active_insulin.unwrap_or(0.0);
-    assert!((active_insulin2 - 8.0).abs() < 0.5, "Expected ~8U IOB, got {}", active_insulin2);
-    let bolus2 = output2.recommendation.unwrap().automatic.unwrap().bolus_units.unwrap_or(0.0);
-    assert!((bolus2 - 0.0).abs() < 0.05, "Expected 0U bolus with maxBolus=4, got {}", bolus2);
+    assert!(
+        (active_insulin2 - 8.0).abs() < 0.5,
+        "Expected ~8U IOB, got {}",
+        active_insulin2
+    );
+    let bolus2 = output2
+        .recommendation
+        .unwrap()
+        .automatic
+        .unwrap()
+        .bolus_units
+        .unwrap_or(0.0);
+    assert!(
+        (bolus2 - 0.0).abs() < 0.05,
+        "Expected 0U bolus with maxBolus=4, got {}",
+        bolus2
+    );
 }
 
 // ── testTempBasalMaxIOBClamping ───────────────────────────────────────────────
@@ -245,17 +417,45 @@ fn test_temp_basal_max_iob_clamping() {
     input.max_bolus = 8.0;
     let output = run(&input);
     let active_insulin = output.active_insulin.unwrap_or(0.0);
-    assert!((active_insulin - 8.0).abs() < 0.5, "Expected ~8U IOB, got {}", active_insulin);
-    let rate = output.recommendation.unwrap().automatic.unwrap().basal_adjustment.units_per_hour;
-    assert!((rate - 8.0).abs() < 0.05, "Expected 8 U/hr with maxBolus=8, got {}", rate);
+    assert!(
+        (active_insulin - 8.0).abs() < 0.5,
+        "Expected ~8U IOB, got {}",
+        active_insulin
+    );
+    let rate = output
+        .recommendation
+        .unwrap()
+        .automatic
+        .unwrap()
+        .basal_adjustment
+        .units_per_hour;
+    assert!(
+        (rate - 8.0).abs() < 0.05,
+        "Expected 8 U/hr with maxBolus=8, got {}",
+        rate
+    );
 
     // maxBolus = 4 → maxActiveInsulin = 8; IOB = 8 → headroom = 0 → only scheduled basal
     input.max_bolus = 4.0;
     let output2 = run(&input);
     let active_insulin2 = output2.active_insulin.unwrap_or(0.0);
-    assert!((active_insulin2 - 8.0).abs() < 0.5, "Expected ~8U IOB, got {}", active_insulin2);
-    let rate2 = output2.recommendation.unwrap().automatic.unwrap().basal_adjustment.units_per_hour;
-    assert!((rate2 - 1.0).abs() < 0.05, "Expected 1 U/hr with maxBolus=4, got {}", rate2);
+    assert!(
+        (active_insulin2 - 8.0).abs() < 0.5,
+        "Expected ~8U IOB, got {}",
+        active_insulin2
+    );
+    let rate2 = output2
+        .recommendation
+        .unwrap()
+        .automatic
+        .unwrap()
+        .basal_adjustment
+        .units_per_hour;
+    assert!(
+        (rate2 - 1.0).abs() < 0.05,
+        "Expected 1 U/hr with maxBolus=4, got {}",
+        rate2
+    );
 }
 
 // ── testRecommendationWithMidAbsorptionISF ────────────────────────────────────
@@ -280,13 +480,21 @@ fn test_recommendation_with_mid_absorption_isf() {
     input.use_mid_absorption_isf = false;
     let output = run(&input);
     let amount = output.recommendation.unwrap().manual.unwrap().amount_iu;
-    assert!((amount - 2.58).abs() < 0.05, "Expected 2.58, got {}", amount);
+    assert!(
+        (amount - 2.58).abs() < 0.05,
+        "Expected 2.58, got {}",
+        amount
+    );
 
     // With mid-absorption ISF
     input.use_mid_absorption_isf = true;
     let output2 = run(&input);
     let amount2 = output2.recommendation.unwrap().manual.unwrap().amount_iu;
-    assert!((amount2 - 1.41).abs() < 0.05, "Expected 1.41, got {}", amount2);
+    assert!(
+        (amount2 - 1.41).abs() < 0.05,
+        "Expected 1.41, got {}",
+        amount2
+    );
 }
 
 // ── testIncompleteISFTimelineDetected ─────────────────────────────────────────
@@ -308,20 +516,24 @@ fn test_incomplete_isf_timeline_starts_too_late() {
         model: ModelPreset::RapidActingAdult.model(),
     }];
 
-    input.glucose_history = vec![
-        GlucoseSample { start: now - 60.0, value_mgdl: 105.0, provenance: 0, is_display_only: false },
-    ];
+    input.glucose_history = vec![GlucoseSample {
+        start: now - 60.0,
+        value_mgdl: 105.0,
+        provenance: 0,
+        is_display_only: false,
+    }];
 
     // Sensitivity doesn't cover start of basal dose (starts at `now`, but dose starts at now-5min)
     let forecast_end = ceil_to(now + DEFAULT_INSULIN_ACTIVITY_DURATION, DELTA);
-    input.sensitivity_schedule = vec![
-        ScheduleEntry::new(now, forecast_end, 50.0),
-    ];
+    input.sensitivity_schedule = vec![ScheduleEntry::new(now, forecast_end, 50.0)];
 
     let output = run(&input);
     assert!(
-        matches!(output.recommendation, Err(AlgorithmError::SensitivityTimelineStartsTooLate)),
-        "Expected SensitivityTimelineStartsTooLate, got {:?}", output.recommendation
+        matches!(
+            output.recommendation,
+            Err(AlgorithmError::SensitivityTimelineStartsTooLate)
+        ),
+        "Expected SensitivityTimelineStartsTooLate, got {:?}",
+        output.recommendation
     );
 }
-
