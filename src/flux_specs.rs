@@ -27,6 +27,40 @@ impl f64 {
 }
 
 // -----------------------------------------------------------------------
+// usize unchecked arithmetic.
+//
+// These are `unsafe fn`s whose real safety contract is "the operation must
+// not overflow" (checked at runtime by the stdlib's internal
+// `assert_unsafe_precondition!` guard, which panics via `panic_nounwind_fmt`
+// if violated). The preconditions below are lifted directly from that guard
+// (`!lhs.overflowing_sub(rhs).1` / `!lhs.overflowing_add(rhs).1`), matching
+// the success condition already used for `checked_sub`/`checked_add` in
+// flux-core. Given the precondition, the debug-mode guard can never fire, so
+// `no_panic` is sound.
+// TODO: port these into flux-core's `uint_spec!`/`int_spec!` macros
+// (lib/flux-core/src/num/mod.rs) so all integer widths get them.
+// -----------------------------------------------------------------------
+#[extern_spec(core::num)]
+impl usize {
+    #[no_panic]
+    #[spec(fn(num: usize, rhs: usize{rhs <= num}) -> usize[num - rhs])]
+    unsafe fn unchecked_sub(self, rhs: usize) -> usize;
+
+    #[no_panic]
+    #[spec(fn(num: usize, rhs: usize{num + rhs <= usize::MAX}) -> usize[num + rhs])]
+    unsafe fn unchecked_add(self, rhs: usize) -> usize;
+}
+
+// isize::unchecked_neg — same reasoning as above. Real guard is
+// `!lhs.overflowing_neg().1`, i.e. `num != isize::MIN` (negating MIN overflows).
+#[extern_spec(core::num)]
+impl isize {
+    #[no_panic]
+    #[spec(fn(num: isize{num != isize::MIN}) -> isize[-num])]
+    unsafe fn unchecked_neg(self) -> isize;
+}
+
+// -----------------------------------------------------------------------
 // f64 methods from std (exp, floor, ceil, sqrt)
 // Paths match the def path prefix: std::f64::{impl#0}::method
 // -----------------------------------------------------------------------
@@ -66,6 +100,10 @@ impl<T> Vec<T> {
     #[no_panic]
     #[flux::sig(fn() -> Vec<T>[0])]
     fn new() -> Vec<T>;
+
+    #[no_panic]
+    #[spec(fn(usize) -> Vec<T>[0])]
+    fn with_capacity(capacity: usize) -> Vec<T>;
 }
 
 #[extern_spec]
@@ -145,10 +183,7 @@ impl<T, A: Allocator> DerefMut for Vec<T, A> {
 // BTreeMap
 // ---------------------------------------------------------------------------------------
 
-use std::collections::{
-    btree_map::{Entry, Iter},
-    BTreeMap,
-};
+use std::collections::{btree_map::Entry, BTreeMap};
 
 // entry, insert — impl<K, V, A: Allocator + Clone> BTreeMap<K, V, A> (impl#20)
 // (get omitted: its return lifetime cannot be expressed without an explicit early-bound
@@ -174,4 +209,50 @@ impl<'a, K: Ord, V: Default, A: Allocator + Clone> Entry<'a, K, V, A> {
 impl<'a, K: 'a, V: 'a> Iterator for Iter<'a, K, V> {
     #[no_panic]
     fn next(&mut self) -> Option<(&'a K, &'a V)>;
+}
+
+// ---------------------------------------------------------------------------------------
+// slice::Iter — all/any
+//
+// flux-core's iter.rs only specs `next`; it doesn't cover the closure-taking
+// combinators, so any call to them under a `no_panic` obligation is flagged as
+// possibly panicking. These take a closure, so they need `no_panic_if` rather
+// than a plain `no_panic` (see flux's CLAUDE.md "Closures and panic").
+// TODO: port these into flux-core/src/slice/iter.rs so they're covered generally.
+// ---------------------------------------------------------------------------------------
+#[extern_spec(core::slice)]
+impl<'a, T> Iterator for Iter<'a, T> {
+    #[flux_rs::no_panic_if(F::no_panic())]
+    #[spec(fn(&mut Iter<T>[@it], F) -> bool)]
+    fn all<F: FnMut(&'a T) -> bool>(&mut self, f: F) -> bool;
+
+    #[flux_rs::no_panic_if(F::no_panic())]
+    #[spec(fn(&mut Iter<T>[@it], F) -> bool)]
+    fn any<F: FnMut(&'a T) -> bool>(&mut self, f: F) -> bool;
+
+    #[flux_rs::no_panic_if(F::no_panic())]
+    #[spec(fn(Iter<T>, B, F) -> B)]
+    fn fold<B, F: FnMut(B, &'a T) -> B>(self, init: B, f: F) -> B;
+}
+
+// ---------------------------------------------------------------------------------------
+// slice::Iter — next_back
+//
+// `next_back`'s real implementation is `#[inline]` all the way down through
+// `NonNull::sub`'s call to `isize::unchecked_neg`. Giving `unchecked_neg` its
+// own sound spec (see above) doesn't help here: MIR inlining flattens that
+// whole call chain into `next_back`'s body before extern-spec substitution
+// can intercept the (now-vanished) call to `unchecked_neg`, leaving only a
+// call to the macro-generated `precondition_check` helper, which has no
+// stable path and can't be extern-spec'd directly. So `next_back` itself
+// needs a trusted contract, mirroring `next`'s existing spec in flux-core's
+// iter.rs (idx unchanged, len decreases by 1, instead of idx+1/len unchanged).
+// TODO: port into flux-core/src/slice/iter.rs alongside `next`.
+// ---------------------------------------------------------------------------------------
+#[extern_spec(core::slice)]
+impl<'a, T> DoubleEndedIterator for Iter<'a, T> {
+    #[no_panic]
+    #[spec(fn(self: &mut Iter<T>[@curr_s]) -> Option<_>[curr_s.idx < curr_s.len]
+           ensures self: Iter<T>{next_s: curr_s.idx == next_s.idx && next_s.len == curr_s.len - 1})]
+    fn next_back(&mut self) -> Option<&'a T>;
 }

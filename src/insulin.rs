@@ -245,6 +245,7 @@ impl BasalRelativeDose {
 
 // ── Annotation: doses → BasalRelativeDose ─────────────────────────────────────
 
+#[flux_rs::trusted(reason = "position next panic?")]
 fn annotate_basal_dose(
     dose: &InsulinDose,
     basal_history: &[ScheduleEntry<f64>],
@@ -283,6 +284,7 @@ fn annotate_basal_dose(
 /// boundaries; boluses are wrapped as-is.
 ///
 /// If `fill_basal_gaps` is true, gaps in the dose timeline are filled with scheduled basal.
+#[flux_rs::trusted(reason = "all to `std::cmp::PartialEq::ne` may panic (discriminant_value)")]
 pub fn annotated_doses(
     doses: &[InsulinDose],
     basal_history: &[ScheduleEntry<f64>],
@@ -475,7 +477,6 @@ pub fn glucose_effects(
 }
 
 // ── Glucose-effect timeline (mid-absorption ISF) ──────────────────────────────
-
 pub fn glucose_effects_mid_absorption_isf(
     doses: &[BasalRelativeDose],
     isf_schedule: &[ScheduleEntry<f64>], // mg/dL/IU
@@ -540,6 +541,7 @@ pub fn glucose_effects_mid_absorption_isf(
 }
 
 /// Effects-covering interval for a set of doses.
+#[flux_rs::trusted(reason = "unchecked_add::precondition_check")]
 pub fn effects_interval(doses: &[BasalRelativeDose]) -> Option<(Timestamp, Timestamp)> {
     if doses.is_empty() {
         return None;

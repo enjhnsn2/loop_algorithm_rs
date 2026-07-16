@@ -1,5 +1,6 @@
 #![flux::opts(scrape_quals = true)]
 #![feature(allocator_api)]
+#![feature(unchecked_neg)]
 extern crate flux_core;
 
 pub mod algorithm;

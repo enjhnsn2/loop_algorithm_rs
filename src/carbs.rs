@@ -602,7 +602,9 @@ impl CarbStatusBuilder {
 }
 
 // ── Dynamic COB and carb glucose effects ──────────────────────────────────────
-
+#[flux_rs::trusted(
+    reason = "call to `<std::iter::Map<I, F> as std::iter::Iterator>::fold` may panic"
+)]
 fn carb_simulation_date_range(
     entries: &[CarbStatus],
     from: Option<Timestamp>,

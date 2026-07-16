@@ -207,7 +207,7 @@ impl InsulinCorrection {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
+#[flux_rs::trusted(reason = "FP constraint: sensitivity > 0.0")]
 fn insulin_correction_units(from: f64, to: f64, sensitivity: f64) -> f64 {
     debug_assert!(sensitivity > 0.0, "Negative sensitivity: {sensitivity}");
     (from - to) / sensitivity

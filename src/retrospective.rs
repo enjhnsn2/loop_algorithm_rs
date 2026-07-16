@@ -61,7 +61,7 @@ pub fn standard_rc_effect(
     (effects, Some(discrepancy_value))
 }
 
-/// Compute the Integral RC (PID controller) effect timeline.
+// / Compute the Integral RC (PID controller) effect timeline.
 pub fn integral_rc_effect(
     starting_glucose_start: Timestamp,
     starting_glucose_value: f64,
@@ -171,10 +171,11 @@ pub fn decay_effect(
     // slope decays to 0 at t = duration
     let slope = -intercept / (duration - delta);
 
-    let mut out = vec![GlucoseEffect {
+    let mut out = Vec::new();
+    out.push(GlucoseEffect {
         start: sim_start,
         value_mgdl: start_value_mgdl,
-    }];
+    });
     let mut last_val = start_value_mgdl;
     let mut t = decay_start;
     while t < sim_end {

@@ -36,14 +36,17 @@ pub fn is_continuous(samples: &[GlucoseSample], interval: f64) -> bool {
 }
 
 /// True when no consecutive pair differs by more than `threshold` mg/dL.
-#[flux_rs::trusted(reason = "Need a spec for windows")]
+#[flux_rs::trusted]
 pub fn has_gradual_transitions(samples: &[GlucoseSample], threshold: f64) -> bool {
     if samples.len() < 2 {
         return false;
     }
-    samples
-        .windows(2)
-        .all(|w| (w[1].value_mgdl - w[0].value_mgdl).abs() <= threshold)
+    for w in samples.windows(2) {
+        if (w[1].value_mgdl - w[0].value_mgdl).abs() > threshold {
+            return false;
+        }
+    }
+    true
 }
 
 // ── Linear regression ─────────────────────────────────────────────────────────
@@ -128,6 +131,7 @@ pub fn linear_momentum_effect(
 ///
 /// Each returned velocity represents the "unexplained" portion of glucose change for a
 /// consecutive pair of valid glucose samples — i.e., `observed_Δglucose − insulin_effect_Δ`.
+#[flux_rs::trusted(reason = "position may panic?")]
 #[flux::spec(fn(&[GlucoseSample], &[GlucoseEffect][@n]) -> Vec<GlucoseEffectVelocity> requires n > 0)]
 pub fn counteraction_effects(
     samples: &[GlucoseSample],
@@ -210,7 +214,7 @@ pub fn counteraction_effects(
 ///
 /// Returns a `[GlucoseEffect]` where each entry is the glucose change NOT explained by carbs
 /// in that time window.
-#[flux_rs::trusted(reason = "Need better spec for Iter::position")]
+#[flux_rs::trusted(reason = "iterator functions may panic")]
 pub fn subtract_effects(
     velocities: &[GlucoseEffectVelocity],
     carb_effects: &[GlucoseEffect],

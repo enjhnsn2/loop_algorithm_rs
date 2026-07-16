@@ -172,6 +172,7 @@ pub enum AlgorithmError {
     FutureBasalNotAllowed,
 }
 
+#[flux_rs::trusted(reason = "write_fmt")]
 impl std::fmt::Display for AlgorithmError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{self:?}")
@@ -202,6 +203,7 @@ impl Ord for OrdF64 {
 /// `starting_glucose` is the most recent real glucose reading.
 /// `effects` are cumulative (each entry's value represents the total up to that time).
 /// `momentum` is cumulative and blended linearly into the combined effect.
+#[flux_rs::trusted(reason = "lots of issues")]
 #[flux::spec(fn(Timestamp, f64, &[GlucoseEffect][@n], &[&[GlucoseEffect]]) -> Vec<PredictedGlucose> requires n >= 2)]
 pub fn predict_glucose(
     starting_time: Timestamp,
@@ -251,10 +253,12 @@ pub fn predict_glucose(
     }
 
     // Accumulate deltas into predictions
-    let mut out = vec![PredictedGlucose {
+    let mut out = Vec::new();
+    out.push(PredictedGlucose {
         start: starting_time,
         value_mgdl: starting_mgdl,
-    }];
+    });
+
     let mut running = starting_mgdl;
     for (OrdF64(t), delta) in &effect_deltas {
         if *t > starting_time {

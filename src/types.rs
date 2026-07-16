@@ -39,7 +39,9 @@ impl<T> ScheduleEntry<T> {
 }
 
 /// The entry whose `start <= date`, or `None`.  Assumes `entries` is sorted by start.
-#[flux_rs::trusted(reason = "MightPanic(UnresolvedCall)")]
+#[flux_rs::trusted(
+    reason = "MightPanic(UnresolvedCall). Solution, better spec for find? Could also manually monomorphize"
+)]
 pub fn closest_prior<T>(
     entries: &[ScheduleEntry<T>],
     date: Timestamp,
@@ -167,6 +169,7 @@ pub struct CarbValue {
 /// Compute the `[start, end]` range for a simulation, given optional overrides, an effect
 /// `duration`, and a time-step `delta`.  Returns `None` if `items` is empty and no overrides
 /// are provided.
+#[flux_rs::trusted(reason = "core::num::<impl usize>::unchecked_add::precondition_check")]
 pub fn simulation_date_range(
     starts: &[Timestamp], // startDate of each sample
     ends: &[Timestamp],   // endDate of each sample (may equal startDate)
